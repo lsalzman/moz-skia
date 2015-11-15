@@ -147,4 +147,12 @@
 
 #define SK_RASTERIZE_EVEN_ROUNDING
 
+#ifndef MOZ_IMPLICIT
+#  ifdef MOZ_CLANG_PLUGIN
+#    define MOZ_IMPLICIT __attribute__((annotate("moz_implicit")))
+#  else
+#    define MOZ_IMPLICIT
+#  endif
+#endif
+
 #endif
