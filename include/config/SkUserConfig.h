@@ -163,4 +163,6 @@
 
 #define SK_SUPPORT_LEGACY_GETDEVICE
 
+#define SK_IGNORE_ETC1_SUPPORT
+
 #endif
