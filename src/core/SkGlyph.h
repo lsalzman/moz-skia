@@ -232,6 +232,7 @@ private:
     friend class SkScalerContext_Empty;
     friend class SkScalerContext_FreeType;
     friend class SkScalerContext_FreeType_Base;
+    friend class SkScalerContext_CairoFT;
     friend class SkScalerContext_DW;
     friend class SkScalerContext_GDI;
     friend class SkScalerContext_Mac;
