@@ -102,4 +102,6 @@
 #define SK_G32_SHIFT 8
 #define SK_B32_SHIFT 0
 
+#define SK_ALLOW_STATIC_GLOBAL_INITIALIZERS 0
+
 #endif
