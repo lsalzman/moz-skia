@@ -47,7 +47,7 @@ public:
     using deleter_type = D;
 
 private:
-    template <typename B, bool = is_empty<B>::value /*&& !is_final<B>::value*/>
+    template <typename B, bool>
     struct compressed_base : private B {
         /*constexpr*/ compressed_base() : B() {}
         /*constexpr*/ compressed_base(const B& b) : B(b) {}
@@ -67,25 +67,27 @@ private:
         void swap(compressed_base& that) /*noexcept*/ { SkTSwap(fb, that.fB); }
     };
 
-    struct compressed_data : private compressed_base<deleter_type> {
+    using compressed_deleter_type = compressed_base<deleter_type, is_empty<deleter_type>::value>;
+
+    struct compressed_data : private compressed_deleter_type {
         pointer fPtr;
-        /*constexpr*/ compressed_data() : compressed_base<deleter_type>(), fPtr() {}
+        /*constexpr*/ compressed_data() : compressed_deleter_type(), fPtr() {}
         /*constexpr*/ compressed_data(const pointer& ptr, const deleter_type& d)
-            : compressed_base<deleter_type>(d), fPtr(ptr) {}
+            : compressed_deleter_type(d), fPtr(ptr) {}
         template <typename U1, typename U2, typename = enable_if_t<
             is_convertible<U1, pointer>::value && is_convertible<U2, deleter_type>::value
         >> /*constexpr*/ compressed_data(U1&& ptr, U2&& d)
-            : compressed_base<deleter_type>(skstd::forward<U2>(d)), fPtr(skstd::forward<U1>(ptr)) {}
+            : compressed_deleter_type(skstd::forward<U2>(d)), fPtr(skstd::forward<U1>(ptr)) {}
         /*constexpr*/ pointer& getPointer() /*noexcept*/ { return fPtr; }
         /*constexpr*/ pointer const& getPointer() const /*noexcept*/ { return fPtr; }
         /*constexpr*/ deleter_type& getDeleter() /*noexcept*/ {
-            return compressed_base<deleter_type>::get();
+            return compressed_deleter_type::get();
         }
         /*constexpr*/ deleter_type const& getDeleter() const /*noexcept*/ {
-            return compressed_base<deleter_type>::get();
+            return compressed_deleter_type::get();
         }
         void swap(compressed_data& that) /*noexcept*/ {
-            compressed_base<deleter_type>::swap(static_cast<compressed_base<deleter_type>>(that));
+            compressed_deleter_type::swap(static_cast<compressed_deleter_type>(that));
             SkTSwap(fPtr, that.fPtr);
         }
     };
@@ -217,7 +219,7 @@ public:
     using deleter_type = D;
 
 private:
-    template <typename B, bool = is_empty<B>::value /*&& !is_final<B>::value*/>
+    template <typename B, bool>
     struct compressed_base : private B {
         /*constexpr*/ compressed_base() : B() {}
         /*constexpr*/ compressed_base(const B& b) : B(b) {}
@@ -237,25 +239,27 @@ private:
         void swap(compressed_base& that) /*noexcept*/ { SkTSwap(fb, that.fB); }
     };
 
-    struct compressed_data : private compressed_base<deleter_type> {
+    using compressed_deleter_type = compressed_base<deleter_type, is_empty<deleter_type>::value>;
+
+    struct compressed_data : private compressed_deleter_type {
         pointer fPtr;
-        /*constexpr*/ compressed_data() : compressed_base<deleter_type>(), fPtr() {}
+        /*constexpr*/ compressed_data() : compressed_deleter_type(), fPtr() {}
         /*constexpr*/ compressed_data(const pointer& ptr, const deleter_type& d)
-            : compressed_base<deleter_type>(d), fPtr(ptr) {}
+            : compressed_deleter_type(d), fPtr(ptr) {}
         template <typename U1, typename U2, typename = enable_if_t<
             is_convertible<U1, pointer>::value && is_convertible<U2, deleter_type>::value
         >> /*constexpr*/ compressed_data(U1&& ptr, U2&& d)
-            : compressed_base<deleter_type>(skstd::forward<U2>(d)), fPtr(skstd::forward<U1>(ptr)) {}
+            : compressed_deleter_type(skstd::forward<U2>(d)), fPtr(skstd::forward<U1>(ptr)) {}
         /*constexpr*/ pointer& getPointer() /*noexcept*/ { return fPtr; }
         /*constexpr*/ pointer const& getPointer() const /*noexcept*/ { return fPtr; }
         /*constexpr*/ deleter_type& getDeleter() /*noexcept*/ {
-            return compressed_base<deleter_type>::get();
+            return compressed_deleter_type::get();
         }
         /*constexpr*/ deleter_type const& getDeleter() const /*noexcept*/ {
-            return compressed_base<deleter_type>::get();
+            return compressed_deleter_type::get();
         }
         void swap(compressed_data& that) /*noexcept*/ {
-            compressed_base<deleter_type>::swap(static_cast<compressed_base<deleter_type>>(that));
+            compressed_deleter_type::swap(static_cast<compressed_deleter_type>(that));
             SkTSwap(fPtr, that.fPtr);
         }
     };
