@@ -189,7 +189,7 @@ void shadeSpan_linear_vertical_lerp(TileProc proc, SkGradFixed dx, SkGradFixed f
     // We're a vertical gradient, so no change in a span.
     // If colors change sharply across the gradient, dithering is
     // insufficient (it subsamples the color space) and we need to lerp.
-    unsigned fullIndex = proc(SkGradFixedToFixed(fx));
+    unsigned fullIndex = proc(SkGradFixedToFixed(fx) - (SK_FixedHalf >> SkGradientShaderBase::kCache32Bits));
     unsigned fi = fullIndex >> SkGradientShaderBase::kCache32Shift;
     unsigned remainder = fullIndex & ((1 << SkGradientShaderBase::kCache32Shift) - 1);
 
