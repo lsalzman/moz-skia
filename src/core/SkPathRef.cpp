@@ -160,6 +160,12 @@ void SkPathRef::CreateTransformedCopy(sk_sp<SkPathRef>* dst,
             matrix.mapRect(&(*dst)->fBounds, src.fBounds);
             if (!((*dst)->fIsFinite = (*dst)->fBounds.isFinite())) {
                 (*dst)->fBounds.setEmpty();
+            } else if (src.fPointCnt & 1) {
+                /* Matrix optimizations may cause the first point to use slightly different
+                 * math for its transform, which can lead to it being outside the transformed
+                 * bounds. Include it in the bounds just in case.
+                 */
+                (*dst)->fBounds.growToInclude((*dst)->fPoints[0].fX, (*dst)->fPoints[0].fY);
             }
         } else {
             (*dst)->fIsFinite = false;
