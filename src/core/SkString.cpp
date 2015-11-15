@@ -15,7 +15,7 @@
 // number of bytes (on the stack) to receive the printf result
 static const size_t kBufferSize = 1024;
 
-#ifdef SK_BUILD_FOR_WIN
+#if defined(_MSC_VER) && _MSC_VER < 1900
     #define VSNPRINTF(buffer, size, format, args) \
         _vsnprintf_s(buffer, size, _TRUNCATE, format, args)
     #define SNPRINTF    _snprintf
@@ -33,7 +33,7 @@ static const size_t kBufferSize = 1024;
         va_end(args);                                      \
     } while (0)
 
-#ifdef SK_BUILD_FOR_WIN
+#if defined(_MSC_VER) && _MSC_VER < 1900
 #define V_SKSTRING_PRINTF(output, format)                               \
     do {                                                                \
         va_list args;                                                   \
