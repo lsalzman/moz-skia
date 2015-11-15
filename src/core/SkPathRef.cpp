@@ -170,6 +170,17 @@ void SkPathRef::CreateTransformedCopy(sk_sp<SkPathRef>* dst,
             matrix.mapRect(&(*dst)->fBounds, src.fBounds);
             if (!((*dst)->fIsFinite = (*dst)->fBounds.isFinite())) {
                 (*dst)->fBounds.setEmpty();
+            } else if (src.countPoints() & 1) {
+                /* Matrix optimizations may cause the first point to use slightly different
+                 * math for its transform, which can lead to it being outside the transformed
+                 * bounds. Include it in the bounds just in case.
+                 */
+                SkPoint p = (*dst)->fPoints[0];
+                SkRect& r = (*dst)->fBounds;
+                r.fLeft   = SkMinScalar(r.fLeft, p.fX);
+                r.fTop    = SkMinScalar(r.fTop, p.fY);
+                r.fRight  = SkMaxScalar(r.fRight, p.fX);
+                r.fBottom = SkMaxScalar(r.fBottom, p.fY);
             }
         } else {
             (*dst)->fIsFinite = false;
