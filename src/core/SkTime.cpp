@@ -48,6 +48,15 @@ void SkTime::DateTime::toISO8601(SkString* dst) const {
             return new double(timebase.numer * 1.0 / timebase.denom);
         });
     }
+#elif defined(SK_BUILD_FOR_UNIX) || defined(SK_BUILD_FOR_ANDROID)
+    #include <time.h>
+    double SkTime::GetNSecs() {
+        struct timespec ts;
+        if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+          return 0.0;
+        }
+        return ts.tv_sec * 1e9 + ts.tv_nsec;
+    }
 #else
     // This std::chrono code looks great on Linux and Android,
     // but MSVC 2013 returned mostly garbage (0ns times, etc).
