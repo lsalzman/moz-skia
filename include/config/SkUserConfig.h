@@ -151,4 +151,6 @@
 
 #define SK_IGNORE_ETC1_SUPPORT
 
+#define SK_RASTERIZE_EVEN_ROUNDING
+
 #endif
