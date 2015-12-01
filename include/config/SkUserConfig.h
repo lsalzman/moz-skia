@@ -169,6 +169,8 @@
 
 #define GR_GL_PER_GL_FUNC_CALLBACK 1
 
+#define MOZ_SKIA 1
+
 #ifndef MOZ_IMPLICIT
 #  ifdef MOZ_CLANG_PLUGIN
 #    define MOZ_IMPLICIT __attribute__((annotate("moz_implicit")))
