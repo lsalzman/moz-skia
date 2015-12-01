@@ -439,6 +439,9 @@
         ],
         'paths_to_ignore': [
           '<(skia_include_path)/gpu/gl/GrGLConfig_chrome.h',
+          '<(skia_include_path)/ports/SkAtomics_std.h',
+          '<(skia_include_path)/ports/SkAtomics_atomic.h',
+          '<(skia_include_path)/ports/SkAtomics_sync.h',
           '<(skia_include_path)/ports/SkFontMgr_fontconfig.h',
           '<(skia_include_path)/ports/SkTypeface_mac.h',
           '<(skia_include_path)/ports/SkTypeface_win.h',
