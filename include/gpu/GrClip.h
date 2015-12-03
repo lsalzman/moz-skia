@@ -85,6 +85,8 @@ public:
                 return this->irect() == other.irect();
                 break;
         }
+
+        return false;
     }
 
     bool operator!=(const GrClip& other) const {
