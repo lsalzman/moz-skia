@@ -42,16 +42,16 @@ private:
     DWriteFontTypeface(const SkFontStyle& style,
                        IDWriteFactory* factory,
                        IDWriteFontFace* fontFace,
-                       IDWriteFont* font,
-                       IDWriteFontFamily* fontFamily,
+                       IDWriteFont* font = nullptr,
+                       IDWriteFontFamily* fontFamily = nullptr,
                        IDWriteFontFileLoader* fontFileLoader = nullptr,
                        IDWriteFontCollectionLoader* fontCollectionLoader = nullptr)
         : SkTypeface(style, false)
         , fFactory(SkRefComPtr(factory))
         , fDWriteFontCollectionLoader(SkSafeRefComPtr(fontCollectionLoader))
         , fDWriteFontFileLoader(SkSafeRefComPtr(fontFileLoader))
-        , fDWriteFontFamily(SkRefComPtr(fontFamily))
-        , fDWriteFont(SkRefComPtr(font))
+        , fDWriteFontFamily(SkSafeRefComPtr(fontFamily))
+        , fDWriteFont(SkSafeRefComPtr(font))
         , fDWriteFontFace(SkRefComPtr(fontFace))
     {
 #if SK_HAS_DWRITE_1_H
@@ -73,6 +73,14 @@ public:
 #if SK_HAS_DWRITE_1_H
     SkTScopedComPtr<IDWriteFontFace1> fDWriteFontFace1;
 #endif
+
+    static DWriteFontTypeface* Create(IDWriteFactory* factory,
+                                      IDWriteFontFace* fontFace,
+                                      SkFontStyle aStyle) {
+        return new DWriteFontTypeface(aStyle, factory, fontFace,
+                                      nullptr, nullptr,
+                                      nullptr, nullptr);
+    }
 
     static DWriteFontTypeface* Create(IDWriteFactory* factory,
                                       IDWriteFontFace* fontFace,
