@@ -41,17 +41,18 @@ private:
     DWriteFontTypeface(const SkFontStyle& style,
                        IDWriteFactory* factory,
                        IDWriteFontFace* fontFace,
-                       IDWriteFont* font,
-                       IDWriteFontFamily* fontFamily,
+                       IDWriteFont* font = nullptr,
+                       IDWriteFontFamily* fontFamily = nullptr,
                        IDWriteFontFileLoader* fontFileLoader = nullptr,
                        IDWriteFontCollectionLoader* fontCollectionLoader = nullptr)
         : SkTypeface(style, false)
         , fFactory(SkRefComPtr(factory))
         , fDWriteFontCollectionLoader(SkSafeRefComPtr(fontCollectionLoader))
         , fDWriteFontFileLoader(SkSafeRefComPtr(fontFileLoader))
-        , fDWriteFontFamily(SkRefComPtr(fontFamily))
-        , fDWriteFont(SkRefComPtr(font))
+        , fDWriteFontFamily(SkSafeRefComPtr(fontFamily))
+        , fDWriteFont(SkSafeRefComPtr(font))
         , fDWriteFontFace(SkRefComPtr(fontFace))
+        , fForceGDI(false)
     {
         if (!SUCCEEDED(fDWriteFontFace->QueryInterface(&fDWriteFontFace1))) {
             // IUnknown::QueryInterface states that if it fails, punk will be set to nullptr.
@@ -79,6 +80,18 @@ public:
 
     static DWriteFontTypeface* Create(IDWriteFactory* factory,
                                       IDWriteFontFace* fontFace,
+                                      SkFontStyle aStyle,
+                                      bool aForceGDI) {
+        DWriteFontTypeface* typeface =
+                new DWriteFontTypeface(aStyle, factory, fontFace,
+                                       nullptr, nullptr,
+                                       nullptr, nullptr);
+        typeface->fForceGDI = aForceGDI;
+        return typeface;
+    }
+
+    static DWriteFontTypeface* Create(IDWriteFactory* factory,
+                                      IDWriteFontFace* fontFace,
                                       IDWriteFont* font,
                                       IDWriteFontFamily* fontFamily,
                                       IDWriteFontFileLoader* fontFileLoader = nullptr,
@@ -86,6 +99,8 @@ public:
         return new DWriteFontTypeface(get_style(font), factory, fontFace, font, fontFamily,
                                       fontFileLoader, fontCollectionLoader);
     }
+
+    bool ForceGDI() const { return fForceGDI; }
 
 protected:
     void weak_dispose() const override {
@@ -123,6 +138,7 @@ protected:
 
 private:
     typedef SkTypeface INHERITED;
+    bool fForceGDI;
 };
 
 #endif

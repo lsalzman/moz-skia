@@ -10,6 +10,7 @@
 
 #include "../private/SkLeanWindows.h"
 #include "SkTypeface.h"
+#include <dwrite.h>
 
 #ifdef SK_BUILD_FOR_WIN
 
@@ -43,6 +44,16 @@ class SkRemotableFontMgr;
 struct IDWriteFactory;
 struct IDWriteFontCollection;
 struct IDWriteFontFallback;
+
+/**
+ *  Like the other Typeface create methods, this returns a new reference to the
+ *  corresponding typeface for the specified dwrite font. The caller is responsible
+ *  for calling unref() when it is finished.
+ */
+SK_API SkTypeface* SkCreateTypefaceFromDWriteFont(IDWriteFactory* aFactory,
+                                                  IDWriteFontFace* aFontFace,
+                                                  SkFontStyle aStyle,
+                                                  bool aForceGDI);
 
 SK_API sk_sp<SkFontMgr> SkFontMgr_New_GDI();
 SK_API sk_sp<SkFontMgr> SkFontMgr_New_DirectWrite(IDWriteFactory* factory = NULL,
