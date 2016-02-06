@@ -147,7 +147,9 @@ private:
         {
             AutoLock lock(&fWorkLock);
             for (int i = 0; i < N; i++) {
-                Work work = { [i, fn]() { fn(i); }, pending };
+                Work work;
+                work.fn = [i, fn]() { fn(i); };
+                work.pending = pending;
                 fWork.push_back(work);
             }
         }
