@@ -8,8 +8,6 @@
 #ifndef SkTaskGroup_DEFINED
 #define SkTaskGroup_DEFINED
 
-#include <functional>
-
 #include "SkTypes.h"
 #include "SkAtomics.h"
 #include "SkTemplates.h"

@@ -18,8 +18,52 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <type_traits>
 #include <utility>
+
+#if SKIA_IMPLEMENTATION
+#include <algorithm>
+#endif
+
+#ifdef MOZ_SKIA
+#include "mozilla/Move.h"
+#include "mozilla/TypeTraits.h"
+
+#if SKIA_IMPLEMENTATION
+#include "mozilla/Function.h"
+#endif
+
+namespace std {
+    using mozilla::Forward;
+    #define forward Forward
+
+#if SKIA_IMPLEMENTATION
+    using mozilla::IntegralConstant;
+    using mozilla::IsEmpty;
+    using mozilla::FalseType;
+    using mozilla::TrueType;
+    #define integral_constant IntegralConstant
+    #define is_empty IsEmpty
+    #define false_type FalseType
+    #define true_type TrueType
+
+    using mozilla::Function;
+    #define function Function
+#endif
+}
+
+namespace skstd {
+
+template <bool B> using bool_constant = mozilla::IntegralConstant<bool, B>;
+
+template <bool B, typename T, typename F> using conditional_t = typename mozilla::Conditional<B, T, F>::Type;
+template <bool B, typename T = void> using enable_if_t = typename mozilla::EnableIf<B, T>::Type;
+
+}
+
+#else /* !MOZ_SKIA */
+
+#include <type_traits>
+#include <functional>
 
 namespace skstd {
 
@@ -120,6 +164,8 @@ template <typename D, typename S> using same_cv = copy_cv<skstd::remove_cv_t<D>,
 template <typename D, typename S> using same_cv_t = typename same_cv<D, S>::type;
 
 }  // namespace sknonstd
+
+#endif /* MOZ_SKIA */
 
 // Just a pithier wrapper for enable_if_t.
 #define SK_WHEN(condition, T) skstd::enable_if_t<!!(condition), T>

@@ -9,7 +9,7 @@
 #define SkValue_DEFINED
 
 #include "SkTypes.h"
-#include <functional>
+#include "SkTemplates.h"
 
 class SkValue {
 public:

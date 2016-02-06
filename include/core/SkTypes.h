@@ -276,7 +276,7 @@ typedef uint8_t SkBool8;
 
 /** Returns 0 or 1 based on the condition
 */
-#define SkToBool(cond)  ((cond) != 0)
+#define SkToBool(cond)  (!!(cond))
 
 #define SK_MaxS16   32767
 #define SK_MinS16   -32767

@@ -12,6 +12,16 @@
 #include <cstddef>
 #include <utility>
 
+#ifdef MOZ_SKIA
+#include "mozilla/UniquePtr.h"
+
+namespace skstd {
+    using mozilla::DefaultDelete;
+    using mozilla::UniquePtr;
+    #define default_delete DefaultDelete
+    #define unique_ptr UniquePtr
+}
+#else
 namespace skstd {
 
 template <typename T> struct default_delete {
@@ -397,5 +407,6 @@ inline bool operator!=(std::nullptr_t, const unique_ptr<T, D>& b) /*noexcept*/ {
 }
 
 }  // namespace skstd
+#endif
 
 #endif
