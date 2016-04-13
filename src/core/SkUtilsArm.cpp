@@ -16,7 +16,11 @@
 #include <pthread.h>
 
 #if defined(SK_BUILD_FOR_ANDROID)
-#  include <cpu-features.h>
+#  ifdef MOZ_SKIA
+#    include "mozilla/arm.h"
+#  else
+#    include <cpu-features.h>
+#  endif
 #endif
 
 // A function used to determine at runtime if the target CPU supports
@@ -29,9 +33,11 @@ static bool sk_cpu_arm_check_neon(void) {
 // Use the Android NDK's cpu-features helper library to detect NEON at runtime.
 // See http://crbug.com/164154 to see why this is needed in Chromium for Android.
 #ifdef SK_BUILD_FOR_ANDROID
-
+#  ifdef MOZ_SKIA
+  result = mozilla::supports_neon();
+#  else
   result = (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
-
+#endif
 #else  // SK_BUILD_FOR_ANDROID
 
     // There is no user-accessible CPUID instruction on ARM that we can use.

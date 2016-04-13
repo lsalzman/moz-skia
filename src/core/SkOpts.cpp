@@ -59,7 +59,11 @@ namespace SK_OPTS_NS {
        defined(SK_CPU_ARM32)         && \
        defined(SK_BUILD_FOR_ANDROID) && \
       !defined(SK_BUILD_FOR_ANDROID_FRAMEWORK)
-    #include <cpu-features.h>
+    #ifdef MOZ_SKIA
+        #include "mozilla/arm.h"
+    #else
+        #include <cpu-features.h>
+    #endif
 #endif
 
 namespace SkOpts {
@@ -140,7 +144,11 @@ namespace SkOpts {
            defined(SK_CPU_ARM32)         && \
            defined(SK_BUILD_FOR_ANDROID) && \
           !defined(SK_BUILD_FOR_ANDROID_FRAMEWORK)
-        if (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) { Init_neon(); }
+        #ifdef MOZ_SKIA
+            if (mozilla::supports_neon()) { Init_neon(); }
+        #else
+            if (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) { Init_neon(); }
+        #endif
     #endif
     }
 
