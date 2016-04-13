@@ -1085,7 +1085,7 @@ bool GrGLGpu::uploadTexData(GrPixelConfig texConfig, int texWidth, int texHeight
     }
 
     // in case we need a temporary, trimmed copy of the src pixels
-    SkAutoSMalloc<128 * 128> tempStorage;
+    SkAutoMalloc tempStorage;
 
     if (mipMapsStatus) {
         *mipMapsStatus = GrMipMapsStatus::kValid;
@@ -2410,7 +2410,7 @@ bool GrGLGpu::onReadPixels(GrSurface* surface, GrSurfaceOrigin origin,
 
     // determine if GL can read using the passed rowBytes or if we need
     // a scratch buffer.
-    SkAutoSMalloc<32 * sizeof(GrColor)> scratch;
+    SkAutoMalloc scratch;
     if (rowBytes != tightRowBytes) {
         if (this->glCaps().packRowLengthSupport() && !(rowBytes % bytesPerPixel)) {
             GL_CALL(PixelStorei(GR_GL_PACK_ROW_LENGTH,
