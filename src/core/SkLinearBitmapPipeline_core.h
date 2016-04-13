@@ -84,8 +84,10 @@ public:
     Span emptySpan() { return Span{{0.0, 0.0}, 0.0f, 0}; }
 
     bool completelyWithin(SkScalar xMin, SkScalar xMax) const {
-        SkScalar sMin, sMax;
-        std::tie(sMin, sMax) = std::minmax(startX(), endX());
+        SkScalar sMin = startX(), sMax = endX();
+        if (sMax < sMin) {
+          std::swap(sMin, sMax);
+        }
         return xMin <= sMin && sMax < xMax;
     }
 

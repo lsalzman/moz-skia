@@ -13,7 +13,20 @@
 #include <limits>
 #include "SkColor.h"
 #include "SkSize.h"
+
+#ifdef MOZ_SKIA
+#include "mozilla/Tuple.h"
+
+namespace std {
+  using mozilla::Tie;
+  using mozilla::Tuple;
+  #define tie Tie
+  #define tuple Tuple
+}
+#else
 #include <tuple>
+#endif
+
 #include "SkLinearBitmapPipeline_core.h"
 #include "SkLinearBitmapPipeline_matrix.h"
 #include "SkLinearBitmapPipeline_tile.h"

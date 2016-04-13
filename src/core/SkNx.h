@@ -14,7 +14,6 @@
 #include "SkTypes.h"
 #include <limits>
 #include <math.h>
-#include <type_traits>
 
 #define SI static inline
 

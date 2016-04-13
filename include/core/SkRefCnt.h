@@ -391,7 +391,7 @@ template <typename T, typename U> inline bool operator<(const sk_sp<T>& a, const
     // Provide defined total order on sk_sp.
     // http://wg21.cmeerw.net/lwg/issue1297
     // http://wg21.cmeerw.net/lwg/issue1401 .
-    return std::less<skstd::common_type_t<T*, U*>>()(a.get(), b.get());
+    return std::less<void*>()((void*)a.get(), (void*)b.get());
 }
 template <typename T> inline bool operator<(const sk_sp<T>& a, std::nullptr_t) {
     return std::less<T*>()(a.get(), nullptr);

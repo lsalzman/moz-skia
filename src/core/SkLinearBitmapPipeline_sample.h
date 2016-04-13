@@ -10,8 +10,6 @@
 
 #include "SkFixed.h"
 #include "SkLinearBitmapPipeline_core.h"
-#include <array>
-#include <tuple>
 
 namespace {
 // Explaination of the math:

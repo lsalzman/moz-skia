@@ -14,10 +14,94 @@
 #ifndef SkTLogic_DEFINED
 #define SkTLogic_DEFINED
 
-#include <stddef.h>
+#include <cstddef>
 #include <stdint.h>
-#include <type_traits>
 #include <utility>
+#include <memory>
+#include <algorithm>
+#include <functional>
+
+#ifdef MOZ_SKIA
+#include "mozilla/Function.h"
+#include "mozilla/Move.h"
+#include "mozilla/TypeTraits.h"
+#include "mozilla/UniquePtr.h"
+
+// In libc++, symbols such as std::forward may be defined in std::__1.
+// The _LIBCPP_BEGIN_NAMESPACE_STD and _LIBCPP_END_NAMESPACE_STD macros
+// will expand to the correct namespace.
+#ifdef _LIBCPP_BEGIN_NAMESPACE_STD
+#define MOZ_BEGIN_STD_NAMESPACE _LIBCPP_BEGIN_NAMESPACE_STD
+#define MOZ_END_STD_NAMESPACE _LIBCPP_END_NAMESPACE_STD
+#else
+#define MOZ_BEGIN_STD_NAMESPACE namespace std {
+#define MOZ_END_STD_NAMESPACE }
+#endif
+
+MOZ_BEGIN_STD_NAMESPACE
+  using mozilla::Forward;
+  using mozilla::Move;
+  #define forward Forward
+  #define move Move
+MOZ_END_STD_NAMESPACE
+
+namespace std {
+  // If we have 'using mozilla::function', we're going to collide with
+  // 'std::function' on platforms that have it. Therefore we use a macro
+  // work around.
+  template<typename Signature>
+  using moz_function = mozilla::function<Signature>;
+  #define function moz_function
+
+  typedef decltype(nullptr) moz_nullptr_t;
+  #define nullptr_t moz_nullptr_t
+
+  using mozilla::DefaultDelete;
+  using mozilla::UniquePtr;
+  #define default_delete DefaultDelete
+  #define unique_ptr UniquePtr
+
+  using mozilla::IsEnum;
+  using mozilla::IsIntegral;
+  using mozilla::FalseType;
+  using mozilla::TrueType;
+  #define is_enum IsEnum
+  #define is_integral IsIntegral
+  #define false_type FalseType
+  #define true_type TrueType
+
+#if SKIA_IMPLEMENTATION
+  using mozilla::IntegralConstant;
+  using mozilla::IsEmpty;
+  using mozilla::IsPod;
+  using mozilla::IsUnsigned;
+  #define integral_constant IntegralConstant
+  #define is_empty IsEmpty
+  #define is_pod IsPod
+  #define is_unsigned IsUnsigned
+#endif
+}
+
+namespace skstd {
+
+template <bool B> using bool_constant = mozilla::IntegralConstant<bool, B>;
+
+template <bool B, typename T, typename F> using conditional_t = typename mozilla::Conditional<B, T, F>::Type;
+template <bool B, typename T = void> using enable_if_t = typename mozilla::EnableIf<B, T>::Type;
+
+template <typename From, typename To> using is_convertible = mozilla::IsConvertible<From, To>;
+template <typename T> using remove_pointer_t = typename mozilla::RemovePointer<T>::Type;
+
+template <typename T> struct underlying_type {
+    using type = __underlying_type(T);
+};
+template <typename T> using underlying_type_t = typename skstd::underlying_type<T>::type;
+
+}
+
+#else /* !MOZ_SKIA */
+
+#include <type_traits>
 
 namespace skstd {
 
@@ -141,6 +225,8 @@ template <typename D, typename S> using same_cv = copy_cv<skstd::remove_cv_t<D>,
 template <typename D, typename S> using same_cv_t = typename same_cv<D, S>::type;
 
 }  // namespace sknonstd
+
+#endif /* MOZ_SKIA */
 
 // Just a pithier wrapper for enable_if_t.
 #define SK_WHEN(condition, T) skstd::enable_if_t<!!(condition), T>
