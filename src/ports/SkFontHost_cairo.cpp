@@ -275,6 +275,16 @@ public:
 
     void* GetFTFaceContext() const { return fFTFaceContext; }
 
+    bool hasColorGlyphs() const override
+    {
+        // Check if the font has scalable outlines. If not, then avoid trying
+        // to render it as a path.
+        if (fFTFace) {
+            return !FT_IS_SCALABLE(fFTFace);
+        }
+        return false;
+    }
+
 private:
     ~SkCairoFTTypeface()
     {

@@ -335,6 +335,12 @@ public:
      */
     SkRect getBounds() const;
 
+    /***
+     * Returns whether this typeface has color glyphs and therefore cannot be
+     * rendered as a path. e.g. Emojis.
+     */
+    virtual bool hasColorGlyphs() const { return false; }
+
     // PRIVATE / EXPERIMENTAL -- do not call
     void filterRec(SkScalerContextRec* rec) const {
         this->onFilterRec(rec);

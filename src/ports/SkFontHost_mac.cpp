@@ -714,6 +714,7 @@ public:
     SkUniqueCFRef<CTFontRef> fFontRef;
     SkUniqueCFRef<CFTypeRef> fOriginatingCFTypeRef;
     const bool fHasColorGlyphs;
+    bool hasColorGlyphs() const override { return fHasColorGlyphs; }
 
 protected:
     int onGetUPEM() const override;

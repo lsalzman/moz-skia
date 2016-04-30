@@ -136,6 +136,11 @@ bool SkStrikeSpec::ShouldDrawAsPath(
         return true;
     }
 
+    // Glyphs like Emojis can't be rendered as a path.
+    if (font.getTypeface() && font.getTypeface()->hasColorGlyphs()) {
+      return false;
+    }
+
     SkMatrix textMatrix = SkFontPriv::MakeTextMatrix(font);
     textMatrix.postConcat(viewMatrix);
 
