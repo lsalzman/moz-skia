@@ -507,6 +507,7 @@ public:
     UniqueCFRef<CTFontRef> fFontRef;
     UniqueCFRef<CFTypeRef> fOriginatingCFTypeRef;
     const bool fHasColorGlyphs;
+    bool hasColorGlyphs() const override { return fHasColorGlyphs; }
 
 protected:
     int onGetUPEM() const override;
