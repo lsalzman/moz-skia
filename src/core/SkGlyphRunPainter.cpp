@@ -128,6 +128,11 @@ bool SkGlyphRunListPainter::ShouldDrawAsPath(
         return true;
     }
 
+    // Glyphs like Emojis can't be rendered as a path.
+    if (font.getTypeface() && font.getTypeface()->hasColorGlyphs()) {
+      return false;
+    }
+
     return SkFontPriv::TooBigToUseCache(matrix, SkFontPriv::MakeTextMatrix(font), 1024);
 }
 
