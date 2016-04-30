@@ -1363,6 +1363,11 @@ bool SkDraw::ShouldDrawTextAsPaths(const SkPaint& paint, const SkMatrix& ctm, Sk
         return true;
     }
 
+    // Glyphs like Emojis can't be rendered as a path.
+    if (paint.getTypeface() && paint.getTypeface()->hasColorGlyphs()) {
+      return false;
+    }
+
     SkMatrix textM;
     SkPaintPriv::MakeTextMatrix(&textM, paint);
     return SkPaint::TooBigToUseCache(ctm, textM, sizeLimit);
