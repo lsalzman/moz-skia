@@ -219,13 +219,12 @@ bool SkBitmapProcState::chooseScanlineProcs(bool trivialMatrix, bool clampClamp)
 
         fSampleProc32 = SK_ARM_NEON_WRAP(gSkBitmapProcStateSample32)[index];
 
-        // our special-case shaderprocs
-        if (S32_opaque_D32_nofilter_DX == fSampleProc32 && clampClamp) {
-            fShaderProc32 = Clamp_S32_opaque_D32_nofilter_DX_shaderproc;
-        }
-
+        fShaderProc32 = this->chooseShaderProc32();
         if (nullptr == fShaderProc32) {
-            fShaderProc32 = this->chooseShaderProc32();
+            // our special-case shaderprocs
+            if (S32_opaque_D32_nofilter_DX == fSampleProc32 && clampClamp) {
+                fShaderProc32 = Clamp_S32_opaque_D32_nofilter_DX_shaderproc;
+            }
         }
     }
 
