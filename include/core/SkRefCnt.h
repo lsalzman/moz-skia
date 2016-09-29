@@ -42,12 +42,12 @@ public:
 #endif
     }
 
-#ifdef SK_DEBUG
     /** Return the reference count. Use only for debugging. */
     int32_t getRefCnt() const {
         return fRefCnt.load(std::memory_order_relaxed);
     }
 
+#ifdef SK_DEBUG
     void validate() const {
         SkASSERT(getRefCnt() > 0);
     }
