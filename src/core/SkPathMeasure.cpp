@@ -427,6 +427,7 @@ void SkPathMeasure::buildSegments() {
     fFirstPtIndex = ptIndex;
 
 #ifdef SK_DEBUG
+#ifndef SK_DISABLE_SLOW_DEBUG_VALIDATION
     {
         const Segment* seg = fSegments.begin();
         const Segment* stop = fSegments.end();
@@ -452,6 +453,7 @@ void SkPathMeasure::buildSegments() {
         }
     //  SkDebugf("\n");
     }
+#endif
 #endif
 }
 
