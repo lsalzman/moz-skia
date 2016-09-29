@@ -372,6 +372,7 @@ SkContourMeasure* SkContourMeasureIter::buildSegments() {
     }
 
 #ifdef SK_DEBUG
+#ifndef SK_DISABLE_SLOW_DEBUG_VALIDATION
     {
         const SkContourMeasure::Segment* seg = fSegments.begin();
         const SkContourMeasure::Segment* stop = fSegments.end();
@@ -397,6 +398,7 @@ SkContourMeasure* SkContourMeasureIter::buildSegments() {
         }
     //  SkDebugf("\n");
     }
+#endif
 #endif
 
     return new SkContourMeasure(std::move(fSegments), std::move(fPts), distance, haveSeenClose);
