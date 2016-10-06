@@ -9,7 +9,6 @@
 #include "SkString.h"
 #include "SkTime.h"
 #include "SkTypes.h"
-#include <chrono>
 
 void SkTime::DateTime::toISO8601(SkString* dst) const {
     if (dst) {
@@ -64,8 +63,20 @@ void SkTime::GetDateTime(DateTime* dt) {
 }
 #endif // SK_BUILD_FOR_WIN32
 
+#if defined(SK_BUILD_FOR_UNIX) || defined(SK_BUILD_FOR_ANDROID)
+#include <time.h>
+double SkTime::GetNSecs() {
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+      return 0.0;
+    }
+    return ts.tv_sec * 1e9 + ts.tv_nsec;
+}
+#else
+#include <chrono>
 double SkTime::GetNSecs() {
     auto now = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::nano> ns = now.time_since_epoch();
     return ns.count();
 }
+#endif
