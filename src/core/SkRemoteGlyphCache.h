@@ -27,7 +27,7 @@ public:
     }
 
     SkScalerContextRecDescriptor& operator=(const SkScalerContextRecDescriptor& rhs) {
-        std::memcpy(&fDescriptor, &rhs.fDescriptor, rhs.desc().getLength());
+        memcpy(&fDescriptor, &rhs.fDescriptor, rhs.desc().getLength());
         return *this;
     }
 

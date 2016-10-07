@@ -181,7 +181,7 @@ private:
     union XP {
         XP(const GrXPFactory* factory) : fFactory(factory) {}
         XP(const GrXferProcessor* processor) : fProcessor(processor) {}
-        explicit XP(XP&& that) : fProcessor(that.fProcessor) {
+        XP(XP&& that) : fProcessor(that.fProcessor) {
             SkASSERT(fProcessor == that.fProcessor);
             that.fProcessor = nullptr;
         }

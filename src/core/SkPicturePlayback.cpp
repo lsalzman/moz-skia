@@ -84,7 +84,7 @@ public:
         }
     }
 
-    operator bool() const { return fCount >= 0; }
+    MOZ_IMPLICIT operator bool() const { return fCount >= 0; }
 
     size_t length() const { return fByteLength; }
     const void* text() const { return (const void*)fText; }
