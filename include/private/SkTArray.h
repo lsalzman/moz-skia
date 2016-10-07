@@ -41,7 +41,7 @@ public:
         this->copy(that.fItemArray);
     }
 
-    explicit SkTArray(SkTArray&& that) {
+    SkTArray(SkTArray&& that) {
         // TODO: If 'that' owns its memory why don't we just steal the pointer?
         this->init(that.fCount);
         that.move(fMemArray);

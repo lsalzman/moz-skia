@@ -5,10 +5,6 @@
  * found in the LICENSE file.
  */
 
-#include <cstddef>
-#include <cstring>
-#include <type_traits>
-
 #include "SkAutoPixmapStorage.h"
 #include "GrBitmapTextureMaker.h"
 #include "GrCaps.h"
