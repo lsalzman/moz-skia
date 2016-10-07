@@ -485,7 +485,7 @@ static float byte_to_float(uint8_t byte) {
 static float clamp_normalized_float(float v) {
     if (v > 1.0f) {
         return 1.0f;
-    } else if ((v < 0.0f) || (v != v)) {
+    } else if ((v < 0.0f) || sk_float_isnan(v)) {
         return 0.0f;
     } else {
         return v;

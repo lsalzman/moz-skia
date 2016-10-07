@@ -48,7 +48,7 @@ public:
         this->init(that.fCount, NULL, 0);
         this->copy(that.fItemArray);
     }
-    explicit SkTArray(SkTArray&& that) {
+    SkTArray(SkTArray&& that) {
         this->init(that.fCount, NULL, 0);
         that.move(fMemArray);
         that.fCount = 0;

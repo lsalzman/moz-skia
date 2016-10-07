@@ -16,6 +16,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <new> // see bug 981264
 #include <type_traits>
 #include <utility>
 
