@@ -61,6 +61,14 @@
 #elif defined(SK_CPU_ARM32)         && \
       defined(SK_BUILD_FOR_ANDROID) && \
      !defined(SK_BUILD_FOR_ANDROID_FRAMEWORK)
+  #ifdef MOZ_SKIA
+    #include "mozilla/arm.h"
+    static uint32_t read_cpu_features() {
+        uint32_t features = 0;
+        if (mozilla::supports_neon()) { features |= SkCpu::NEON; }
+        return features;
+    }
+  #else
     #include "cpu-features.h"
 
     static uint32_t read_cpu_features() {
@@ -72,10 +80,15 @@
         if (android_features & ANDROID_CPU_ARM_FEATURE_VFP_FP16) { features |= SkCpu::VFP_FP16; }
         return features;
     }
-
+  #endif
 #elif defined(SK_CPU_ARM64)         && \
       defined(SK_BUILD_FOR_ANDROID) && \
      !defined(SK_BUILD_FOR_ANDROID_FRAMEWORK)
+  #ifdef MOZ_SKIA
+    static uint32_t read_cpu_features() {
+        return 0;
+    }
+  #else
     #include "cpu-features.h"
 
     static uint32_t read_cpu_features() {
@@ -85,7 +98,7 @@
         if (android_features & ANDROID_CPU_ARM64_FEATURE_CRC32) { features |= SkCpu::CRC32; }
         return features;
     }
-
+  #endif
 #else
     static uint32_t read_cpu_features() {
         return 0;

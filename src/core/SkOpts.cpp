@@ -194,7 +194,8 @@ namespace SkOpts {
     void Init_sse42();
     void Init_avx();
     void Init_hsw();
-    void Init_crc32();
+    void Init_crc32() {}
+    void Init_neon();
 
     static void init() {
 #if !defined(SK_BUILD_NO_OPTS)
@@ -207,6 +208,9 @@ namespace SkOpts {
 
     #elif defined(SK_CPU_ARM64)
         if (SkCpu::Supports(SkCpu::CRC32)) { Init_crc32(); }
+
+    #elif defined(SK_CPU_ARM32) && !defined(SK_ARM_HAS_NEON)
+        if (SkCpu::Supports(SkCpu::NEON)) { Init_neon(); }
 
     #endif
 #endif
