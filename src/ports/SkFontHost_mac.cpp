@@ -753,6 +753,9 @@ private:
 // It is not possible to use descriptors with CTFontCreateWithFontDescriptor, since that does not
 // work with non-system fonts. As a result, create the strike specific CTFonts from the underlying
 // CGFont.
+#ifdef MOZ_SKIA
+extern "C" bool Gecko_OnSierraOrLater();
+#endif
 static UniqueCFRef<CTFontRef> ctfont_create_exact_copy(CTFontRef baseFont, CGFloat textSize,
                                                        const CGAffineTransform* transform)
 {
@@ -766,6 +769,33 @@ static UniqueCFRef<CTFontRef> ctfont_create_exact_copy(CTFontRef baseFont, CGFlo
     // Because we cannot setup the CTFont descriptor to match, the same restriction applies here
     // as other uses of CTFontCreateWithGraphicsFont which is that such CTFonts should not escape
     // the scaler context, since they aren't 'normal'.
+
+#ifdef MOZ_SKIA
+    // Avoid calling potentially buggy variation APIs on pre-Sierra macOS
+    // versions (see bug 1331683)
+    if (Gecko_OnSierraOrLater())
+#endif
+    {
+        // Not UniqueCFRef<> because CGFontCopyVariations can return null!
+        CFDictionaryRef variations = CGFontCopyVariations(baseCGFont.get());
+        if (variations) {
+            UniqueCFRef<CFDictionaryRef>
+                varAttr(CFDictionaryCreate(nullptr,
+                                           (const void**)&kCTFontVariationAttribute,
+                                           (const void**)&variations,
+                                           1,
+                                           &kCFTypeDictionaryKeyCallBacks,
+                                           &kCFTypeDictionaryValueCallBacks));
+            CFRelease(variations);
+
+            UniqueCFRef<CTFontDescriptorRef>
+                varDesc(CTFontDescriptorCreateWithAttributes(varAttr.get()));
+
+            return UniqueCFRef<CTFontRef>(
+                    CTFontCreateWithGraphicsFont(baseCGFont.get(), textSize, transform, varDesc.get()));
+        }
+    }
+
     return UniqueCFRef<CTFontRef>(
             CTFontCreateWithGraphicsFont(baseCGFont.get(), textSize, transform, nullptr));
 }
