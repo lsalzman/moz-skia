@@ -2625,8 +2625,10 @@ private:
                                                                 : kNotOpaque_ShaderOverrideOpacity);
     }
 
+public:
     SkBaseDevice* getDevice() const;
     SkBaseDevice* getTopDevice() const;
+private:
 
     class MCRec;
 
