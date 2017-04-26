@@ -48,6 +48,11 @@
 
 #include <dlfcn.h>
 
+#if MAC_OS_X_VERSION_MIN_REQUIRED < 1080
+#define kCTFontOrientationHorizontal kCTFontHorizontalOrientation
+#define kCTFontOrientationVertical kCTFontVerticalOrientation
+#endif
+
 // Experimental code to use a global lock whenever we access CG, to see if this reduces
 // crashes in Chrome
 #define USE_GLOBAL_MUTEX_FOR_CG_ACCESS
