@@ -158,4 +158,6 @@
 #  endif
 #endif
 
+#define MOZ_SKIA
+
 #endif
