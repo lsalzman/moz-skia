@@ -139,4 +139,14 @@
 
 #define SK_DISABLE_SLOW_DEBUG_VALIDATION 1
 
+#ifndef MOZ_IMPLICIT
+#  ifdef MOZ_CLANG_PLUGIN
+#    define MOZ_IMPLICIT __attribute__((annotate("moz_implicit")))
+#  else
+#    define MOZ_IMPLICIT
+#  endif
+#endif
+
+#define MOZ_SKIA
+
 #endif
