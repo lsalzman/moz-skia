@@ -94,4 +94,6 @@
 //#define SK_HISTOGRAM_BOOLEAN(name, value)
 //#define SK_HISTOGRAM_ENUMERATION(name, value, boundary_value)
 
+#define MOZ_SKIA
+
 #endif
