@@ -117,7 +117,7 @@ private:
     struct Validator {
         Validator(sk_sp<SharedGenerator>, const SkIRect* subset);
 
-        operator bool() const { return fSharedGenerator.get(); }
+        MOZ_IMPLICIT operator bool() const { return fSharedGenerator.get(); }
 
         sk_sp<SharedGenerator> fSharedGenerator;
         SkImageInfo            fInfo;
