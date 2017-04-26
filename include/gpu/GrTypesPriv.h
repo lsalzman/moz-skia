@@ -12,6 +12,25 @@
 #include "GrTypes.h"
 #include "SkRefCnt.h"
 
+#ifdef MOZ_SKIA
+#include "mozilla/TimeStamp.h"
+
+struct GrStdSteadyClock
+{
+    typedef mozilla::TimeStamp time_point;
+
+    static time_point now() {
+        return mozilla::TimeStamp::NowLoRes();
+    }
+};
+
+static inline GrStdSteadyClock::time_point
+operator-(GrStdSteadyClock::time_point t, std::chrono::milliseconds ms) {
+    return t - mozilla::TimeDuration::FromMilliseconds(ms.count());
+}
+
+#else
+
 // The old libstdc++ uses the draft name "monotonic_clock" rather than "steady_clock". This might
 // not actually be monotonic, depending on how libstdc++ was built. However, this is only currently
 // used for idle resource purging so it shouldn't cause a correctness problem.
@@ -19,6 +38,8 @@
 using GrStdSteadyClock = std::chrono::monotonic_clock;
 #else
 using GrStdSteadyClock = std::chrono::steady_clock;
+#endif
+
 #endif
 
 /** This enum indicates the type of antialiasing to be performed. */
