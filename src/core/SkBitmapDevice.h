@@ -60,6 +60,8 @@ public:
     static SkBitmapDevice* Create(const SkImageInfo&, const SkSurfaceProps&,
                                   SkRasterHandleAllocator* = nullptr);
 
+    sk_sp<SkImage> snapshotImage() override;
+
 protected:
     bool onShouldDisableLCD(const SkPaint&) const override;
     void* getRasterHandle() const override { return fRasterHandle; }

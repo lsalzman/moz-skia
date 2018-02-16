@@ -506,6 +506,14 @@ sk_sp<SkSpecialImage> SkBitmapDevice::snapSpecial() {
     return this->makeSpecial(fBitmap);
 }
 
+sk_sp<SkImage> SkBitmapDevice::snapshotImage() {
+    SkPixmap pixmap;
+    if (peekPixels(&pixmap)) {
+        return SkImage::MakeFromRaster(pixmap, nullptr, nullptr);
+    }
+    return nullptr;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 sk_sp<SkSurface> SkBitmapDevice::makeSurface(const SkImageInfo& info, const SkSurfaceProps& props) {

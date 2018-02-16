@@ -67,6 +67,8 @@ public:
 
     GrRenderTargetContext* accessRenderTargetContext() override;
 
+    sk_sp<SkImage> snapshotImage() override;
+
     void drawPaint(const SkPaint& paint) override;
     void drawPoints(SkCanvas::PointMode mode, size_t count, const SkPoint[],
                     const SkPaint& paint) override;
