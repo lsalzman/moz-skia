@@ -27,6 +27,7 @@
 #include "SkImageFilterCache.h"
 #include "SkImageInfoPriv.h"
 #include "SkImage_Base.h"
+#include "SkImage_Gpu.h"
 #include "SkLatticeIter.h"
 #include "SkMaskFilterBase.h"
 #include "SkPathEffect.h"
@@ -1268,6 +1269,19 @@ sk_sp<SkSpecialImage> SkGpuDevice::snapSpecial() {
                                                std::move(proxy),
                                                ii.refColorSpace(),
                                                &this->surfaceProps());
+}
+
+sk_sp<SkImage> SkGpuDevice::snapshotImage() {
+    if (GrRenderTargetContext* drawCtx = accessRenderTargetContext()) {
+        drawCtx->prepareForExternalIO(0, nullptr);
+        if (sk_sp<GrTextureProxy> tex = drawCtx->asTextureProxyRef()) {
+            return sk_make_sp<SkImage_Gpu>(fContext.get(),
+                                           kNeedNewImageUniqueID,
+                                           imageInfo().alphaType(),
+                                           tex, nullptr, SkBudgeted::kNo);
+        }
+    }
+    return nullptr;
 }
 
 void SkGpuDevice::drawDevice(SkBaseDevice* device,

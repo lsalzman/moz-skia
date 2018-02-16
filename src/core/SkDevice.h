@@ -11,6 +11,7 @@
 #include "SkRefCnt.h"
 #include "SkCanvas.h"
 #include "SkColor.h"
+#include "SkImage.h"
 #include "SkSurfaceProps.h"
 
 class SkBitmap;
@@ -124,6 +125,8 @@ public:
     }
     void setGlobalCTM(const SkMatrix& ctm);
     virtual void validateDevBounds(const SkIRect&) {}
+
+    virtual sk_sp<SkImage> snapshotImage() { return nullptr; }
 
 protected:
     enum TileUsage {
