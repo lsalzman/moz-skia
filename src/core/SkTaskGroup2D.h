@@ -10,7 +10,7 @@
 
 #include "SkTaskGroup.h"
 
-#include <mutex>
+#include "SkMutex.h"
 #include <vector>
 
 // The interface for doing work on a 2D grid with possible initialization on columns.
@@ -114,7 +114,7 @@ private:
         RowData() : fNextColumn(0) {}
 
         int         fNextColumn; // next column index to work
-        std::mutex  fMutex;      // the mutex for the thread to acquire
+        SkMutex     fMutex;      // the mutex for the thread to acquire
     };
 
     std::vector<RowData>    fRowData;

@@ -60,7 +60,7 @@ void SkFlexibleTaskGroup2D::work(int threadId) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wthread-safety-analysis"
 #endif
-        if (rowData.fMutex.try_lock()) {
+        if (rowData.fMutex.try_acquire()) {
             while (rowData.fNextColumn < fWidth &&
                     fKernel->work2D(row, rowData.fNextColumn, threadId)) {
                 rowData.fNextColumn++;
@@ -72,7 +72,7 @@ void SkFlexibleTaskGroup2D::work(int threadId) {
                 numRowsCompleted += (completedRows[row] == false);
                 completedRows[row] = true; // so we won't count this row twice
             }
-            rowData.fMutex.unlock();
+            rowData.fMutex.release();
         }
 #ifdef __clang__
 #pragma clang diagnostic pop
