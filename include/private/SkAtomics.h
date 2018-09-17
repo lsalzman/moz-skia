@@ -57,7 +57,7 @@ public:
     }
 
     // Alias for .load(default_memory_order).
-    operator T() const {
+    MOZ_IMPLICIT operator T() const {
         return this->load();
     }
 
