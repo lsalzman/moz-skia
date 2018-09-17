@@ -9,6 +9,7 @@
 #define SkOpts_DEFINED
 
 #include "include/core/SkTypes.h"
+#include "src/core/SkConvolver.h"
 #include "src/core/SkRasterPipeline.h"
 #include "src/core/SkXfermodePriv.h"
 
@@ -76,6 +77,14 @@ namespace SkOpts {
     extern void (*start_pipeline_lowp )(size_t,size_t,size_t,size_t, void**);
 #undef M
 
+    extern void (*convolve_vertically)(const SkConvolutionFilter1D::ConvolutionFixed* filter_values,
+                                       int filter_length, unsigned char* const* source_data_rows,
+                                       int pixel_width, unsigned char* out_row, bool has_alpha);
+    extern void (*convolve_4_rows_horizontally)(const unsigned char* src_data[4],
+                                                const SkConvolutionFilter1D& filter,
+                                                unsigned char* out_row[4], size_t out_row_bytes);
+    extern void (*convolve_horizontally)(const unsigned char* src_data, const SkConvolutionFilter1D& filter,
+                                         unsigned char* out_row, bool has_alpha);
 }
 
 #endif//SkOpts_DEFINED

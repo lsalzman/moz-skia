@@ -36,6 +36,7 @@
     #define SK_OPTS_NS portable
 #endif
 
+#include "src/opts/SkBitmapFilter_opts.h"
 #include "src/opts/SkBitmapProcState_opts.h"
 #include "src/opts/SkBlitMask_opts.h"
 #include "src/opts/SkBlitRow_opts.h"
@@ -84,6 +85,11 @@ namespace SkOpts {
     DEFINE_DEFAULT(hash_fn);
 
     DEFINE_DEFAULT(S32_alpha_D32_filter_DX);
+
+    DEFINE_DEFAULT(convolve_vertically);
+    DEFINE_DEFAULT(convolve_horizontally);
+    DEFINE_DEFAULT(convolve_4_rows_horizontally);
+
 #undef DEFINE_DEFAULT
 
 #define M(st) (StageFn)SK_OPTS_NS::st,
@@ -127,6 +133,8 @@ namespace SkOpts {
             if (SkCpu::Supports(SkCpu::AVX)) { Init_avx();   }
             if (SkCpu::Supports(SkCpu::HSW)) { Init_hsw();   }
         #endif
+
+        if (SkCpu::Supports(SkCpu::HSW  )) { Init_hsw();   }
 
     #elif defined(SK_CPU_ARM64)
         if (SkCpu::Supports(SkCpu::CRC32)) { Init_crc32(); }
