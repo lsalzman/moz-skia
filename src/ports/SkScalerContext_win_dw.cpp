@@ -219,7 +219,7 @@ SkScalerContext_DW::SkScalerContext_DW(sk_sp<DWriteFontTypeface> typefaceRef,
                    typeface->fDWriteFontFace2 &&
                    typeface->fDWriteFontFace2->IsColorFont();
 
-    // In general, all glyphs should use NATURAL_SYMMETRIC
+    // In general, all glyphs should use DWriteFontFace::GetRecommendedRenderingMode
     // except when bi-level rendering is requested or there are embedded
     // bi-level bitmaps (and the embedded bitmap flag is set and no rotation).
     //
@@ -285,7 +285,7 @@ SkScalerContext_DW::SkScalerContext_DW(sk_sp<DWriteFontTypeface> typefaceRef,
 
     // If we can use a bitmap, use gdi classic rendering and measurement.
     // This will not always provide a bitmap, but matches expected behavior.
-    } else if (treatLikeBitmap && axisAlignedBitmap) {
+    } else if ((treatLikeBitmap && axisAlignedBitmap) || typeface->ForceGDI()) {
         fTextSizeRender = gdiTextSize;
         fRenderingMode = DWRITE_RENDERING_MODE_GDI_CLASSIC;
         fTextureType = DWRITE_TEXTURE_CLEARTYPE_3x1;
@@ -302,24 +302,30 @@ SkScalerContext_DW::SkScalerContext_DW(sk_sp<DWriteFontTypeface> typefaceRef,
         fMeasuringMode = DWRITE_MEASURING_MODE_GDI_CLASSIC;
 
     // If the font has a gasp table version 1, use it to determine symmetric rendering.
-    } else if (get_gasp_range(typeface, SkScalarRoundToInt(gdiTextSize), &range) &&
-               range.fVersion >= 1)
-    {
+    } else if ((get_gasp_range(typeface, SkScalarRoundToInt(gdiTextSize), &range) &&
+                range.fVersion >= 1) ||
+               realTextSize > SkIntToScalar(20) || !is_hinted(typeface)) {
         fTextSizeRender = realTextSize;
-        fRenderingMode = range.fFlags.field.SymmetricSmoothing
-                       ? DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC
-                       : DWRITE_RENDERING_MODE_NATURAL;
         fTextureType = DWRITE_TEXTURE_CLEARTYPE_3x1;
         fTextSizeMeasure = realTextSize;
         fMeasuringMode = DWRITE_MEASURING_MODE_NATURAL;
 
-    // If the requested size is above 20px or there are no bytecode hints, use symmetric rendering.
-    } else if (realTextSize > SkIntToScalar(20) || !is_hinted(typeface)) {
-        fTextSizeRender = realTextSize;
-        fRenderingMode = DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC;
-        fTextureType = DWRITE_TEXTURE_CLEARTYPE_3x1;
-        fTextSizeMeasure = realTextSize;
-        fMeasuringMode = DWRITE_MEASURING_MODE_NATURAL;
+        IDWriteRenderingParams* params = sk_get_dwrite_default_rendering_params();
+        DWriteFontTypeface* typeface = static_cast<DWriteFontTypeface*>(getTypeface());
+        if (params &&
+            !SUCCEEDED(typeface->fDWriteFontFace->GetRecommendedRenderingMode(
+                fTextSizeRender,
+                1.0f,
+                fMeasuringMode,
+                params,
+                &fRenderingMode))) {
+            fRenderingMode = DWRITE_RENDERING_MODE_CLEARTYPE_NATURAL_SYMMETRIC;
+        }
+
+        // We don't support outline mode right now.
+        if (fRenderingMode == DWRITE_RENDERING_MODE_OUTLINE) {
+            fRenderingMode = DWRITE_RENDERING_MODE_CLEARTYPE_NATURAL_SYMMETRIC;
+        }
 
     // Fonts with hints, no gasp or gasp version 0, and below 20px get non-symmetric rendering.
     // Often such fonts have hints which were only tested with GDI ClearType classic.
@@ -611,6 +617,7 @@ void SkScalerContext_DW::generateColorMetrics(SkGlyph* glyph) {
     glyph->fTop = ibounds.fTop;
 }
 
+#ifdef USE_PNG
 namespace {
 struct Context {
     SkTScopedComPtr<IDWriteFontFace4> fontFace4;
@@ -677,6 +684,7 @@ void SkScalerContext_DW::generatePngMetrics(SkGlyph* glyph) {
     glyph->fTop = bounds.top();
     return;
 }
+#endif
 
 void SkScalerContext_DW::generateMetrics(SkGlyph* glyph) {
     glyph->fWidth = 0;
@@ -696,8 +704,10 @@ void SkScalerContext_DW::generateMetrics(SkGlyph* glyph) {
     }
 
     if (fIsColorFont && isPngGlyph(*glyph)) {
+#ifdef USE_PNG
         glyph->fMaskFormat = SkMask::kARGB32_Format;
         generatePngMetrics(glyph);
+#endif
         return;
     }
 
@@ -862,10 +872,13 @@ static void rgb_to_a8(const uint8_t* SK_RESTRICT src, const SkGlyph& glyph, cons
 
     for (U16CPU y = 0; y < glyph.fHeight; y++) {
         for (U16CPU i = 0; i < width; i++) {
-            U8CPU r = *(src++);
-            U8CPU g = *(src++);
-            U8CPU b = *(src++);
-            dst[i] = sk_apply_lut_if<APPLY_PREBLEND>((r + g + b) / 3, table8);
+            U8CPU g = src[1];
+            src += 3;
+
+            // Ignore the R, B channels. It looks the closest to what
+            // D2D with grayscale AA has. But there's no way
+            // to just get a grayscale AA alpha texture from a glyph run.
+            dst[i] = sk_apply_lut_if<APPLY_PREBLEND>(g, table8);
         }
         dst = SkTAddOffset<uint8_t>(dst, dstRB);
     }
@@ -1050,6 +1063,7 @@ void SkScalerContext_DW::generateColorGlyphImage(const SkGlyph& glyph) {
     }
 }
 
+#ifdef USE_PNG
 void SkScalerContext_DW::generatePngGlyphImage(const SkGlyph& glyph) {
     SkASSERT(isPngGlyph(glyph));
     SkASSERT(glyph.fMaskFormat == SkMask::Format::kARGB32_Format);
@@ -1091,6 +1105,7 @@ void SkScalerContext_DW::generatePngGlyphImage(const SkGlyph& glyph) {
     canvas.translate(-glyphData.horizontalLeftOrigin.x, -glyphData.horizontalLeftOrigin.y);
     canvas.drawImage(image, 0, 0, nullptr);
 }
+#endif
 
 void SkScalerContext_DW::generateImage(const SkGlyph& glyph) {
     //Create the mask.
@@ -1106,9 +1121,11 @@ void SkScalerContext_DW::generateImage(const SkGlyph& glyph) {
             if (isColorGlyph(glyph)) {
                 generateColorGlyphImage(glyph);
                 return;
+#ifdef USE_PNG
             } else if (isPngGlyph(glyph)) {
                 generatePngGlyphImage(glyph);
                 return;
+#endif
             }
         }
         SkDEBUGFAIL("Could not generate image from the given color font format.");

@@ -34,6 +34,7 @@
 #include "SkTo.h"
 #include "SkTypefaceCache.h"
 #include "SkTypeface_win.h"
+#include "SkTypeface_win_dw.h"
 #include "SkUtils.h"
 
 #include <tchar.h>
@@ -342,6 +343,19 @@ SkTypeface* SkCreateTypefaceFromLOGFONT(const LOGFONT& origLF) {
         SkTypefaceCache::Add(face);
     }
     return face.release();
+}
+
+/***
+ * This guy is public.
+ */
+SkTypeface* SkCreateTypefaceFromDWriteFont(IDWriteFactory* aFactory,
+                                           IDWriteFontFace* aFontFace,
+                                           SkFontStyle aStyle,
+                                           bool aForceGDI,
+                                           float aGamma,
+                                           float aContrast)
+{
+  return DWriteFontTypeface::Create(aFactory, aFontFace, aStyle, aForceGDI, aGamma, aContrast);
 }
 
 /**
@@ -2248,6 +2262,12 @@ void LogFontTypeface::onFilterRec(SkScalerContextRec* rec) const {
     if (!fCanBeLCD && isLCD(*rec)) {
         rec->fMaskFormat = SkMask::kA8_Format;
         rec->fFlags &= ~SkScalerContext::kGenA8FromLCD_Flag;
+    } else if (rec->fMaskFormat == SkMask::kA8_Format) {
+        // Bug 1277404
+        // If we have non LCD GDI text, render the fonts as cleartype and convert them
+        // to grayscale. This seems to be what Chrome and IE are doing on Windows 7.
+        // This also applies if cleartype is disabled system wide.
+        rec->fFlags |= SkScalerContext::kGenA8FromLCD_Flag;
     }
 }
 
