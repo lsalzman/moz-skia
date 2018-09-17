@@ -5,6 +5,7 @@
  * found in the LICENSE file.
  */
 
+#include "SkBitmapScaler.h"
 #include "SkBitmapProcState.h"
 
 /*  A platform may optionally overwrite any of these with accelerated
