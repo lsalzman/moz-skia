@@ -51,6 +51,19 @@ class SkRemotableFontMgr;
 struct IDWriteFactory;
 struct IDWriteFontCollection;
 struct IDWriteFontFallback;
+struct IDWriteFontFace;
+
+/**
+ *  Like the other Typeface create methods, this returns a new reference to the
+ *  corresponding typeface for the specified dwrite font. The caller is responsible
+ *  for calling unref() when it is finished.
+ */
+SK_API SkTypeface* SkCreateTypefaceFromDWriteFont(IDWriteFactory* aFactory,
+                                                  IDWriteFontFace* aFontFace,
+                                                  SkFontStyle aStyle,
+                                                  int aRenderingMode,
+                                                  float aGamma,
+                                                  float aContrast);
 
 SK_API sk_sp<SkFontMgr> SkFontMgr_New_GDI();
 SK_API sk_sp<SkFontMgr> SkFontMgr_New_DirectWrite(IDWriteFactory* factory = NULL,

@@ -390,6 +390,11 @@ void DWriteFontTypeface::onFilterRec(SkScalerContextRec* rec) const {
             rec->setContrast(defaultRenderingParams->GetEnhancedContrast());
         }
     }
+#elif defined(MOZ_SKIA)
+    rec->setContrast(fContrast);
+
+    rec->setDeviceGamma(fGamma);
+    rec->setPaintGamma(fGamma);
 #endif
 }
 

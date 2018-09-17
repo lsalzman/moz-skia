@@ -42,18 +42,46 @@
 /* Note:
  * In versions 8 and 8.1 of Windows, some calls in DWrite are not thread safe.
  * The DWriteFactoryMutex protects the calls that are problematic.
+ *
+ * On DWrite 3 or above, which is only available on Windows 10, we don't enable
+ * the locking to avoid thread contention.
  */
 static SkSharedMutex DWriteFactoryMutex;
 
-typedef SkAutoSharedMutexExclusive Exclusive;
-typedef SkAutoSharedMutexShared Shared;
+struct MaybeExclusive {
+    MaybeExclusive(SkScalerContext_DW* ctx) : fEnabled(!ctx->isDWrite3()) {
+        if (fEnabled) {
+            DWriteFactoryMutex.acquire();
+        }
+    }
+    ~MaybeExclusive() {
+        if (fEnabled) {
+            DWriteFactoryMutex.release();
+        }
+    }
+    bool fEnabled;
+};
+
+struct MaybeShared {
+    MaybeShared(SkScalerContext_DW* ctx) : fEnabled(!ctx->isDWrite3()) {
+        if (fEnabled) {
+            DWriteFactoryMutex.acquireShared();
+        }
+    }
+    ~MaybeShared() {
+        if (fEnabled) {
+            DWriteFactoryMutex.releaseShared();
+        }
+    }
+    bool fEnabled;
+};
 
 static bool isLCD(const SkScalerContextRec& rec) {
     return SkMask::kLCD16_Format == rec.fMaskFormat;
 }
 
-static bool is_hinted(DWriteFontTypeface* typeface) {
-    Exclusive l(DWriteFactoryMutex);
+static bool is_hinted(SkScalerContext_DW* ctx, DWriteFontTypeface* typeface) {
+    MaybeExclusive l(ctx);
     AutoTDWriteTable<SkOTTableMaximumProfile> maxp(typeface->fDWriteFontFace.get());
     if (!maxp.fExists) {
         return false;
@@ -123,8 +151,8 @@ static bool is_gridfit_only(GaspRange::Behavior flags) {
     return flags.raw.value == GaspRange::Behavior::Raw::GridfitMask;
 }
 
-static bool has_bitmap_strike(DWriteFontTypeface* typeface, GaspRange range) {
-    Exclusive l(DWriteFactoryMutex);
+static bool has_bitmap_strike(SkScalerContext_DW* ctx, DWriteFontTypeface* typeface, GaspRange range) {
+    MaybeExclusive l(ctx);
     {
         AutoTDWriteTable<SkOTTableEmbeddedBitmapLocation> eblc(typeface->fDWriteFontFace.get());
         if (!eblc.fExists) {
@@ -220,7 +248,7 @@ SkScalerContext_DW::SkScalerContext_DW(sk_sp<DWriteFontTypeface> typefaceRef,
                    typeface->fDWriteFontFace2 &&
                    typeface->fDWriteFontFace2->IsColorFont();
 
-    // In general, all glyphs should use NATURAL_SYMMETRIC
+    // In general, all glyphs should use DWriteFontFace::GetRecommendedRenderingMode
     // except when bi-level rendering is requested or there are embedded
     // bi-level bitmaps (and the embedded bitmap flag is set and no rotation).
     //
@@ -269,7 +297,7 @@ SkScalerContext_DW::SkScalerContext_DW(sk_sp<DWriteFontTypeface> typefaceRef,
                 range = GaspRange(bitmapPPEM, bitmapPPEM, 0, GaspRange::Behavior());
             }
         }
-        treatLikeBitmap = has_bitmap_strike(typeface, range);
+        treatLikeBitmap = has_bitmap_strike(this, typeface, range);
 
         axisAlignedBitmap = is_axis_aligned(fRec);
     }
@@ -286,7 +314,7 @@ SkScalerContext_DW::SkScalerContext_DW(sk_sp<DWriteFontTypeface> typefaceRef,
 
     // If we can use a bitmap, use gdi classic rendering and measurement.
     // This will not always provide a bitmap, but matches expected behavior.
-    } else if (treatLikeBitmap && axisAlignedBitmap) {
+    } else if ((treatLikeBitmap && axisAlignedBitmap) || typeface->ForceGDI()) {
         fTextSizeRender = gdiTextSize;
         fRenderingMode = DWRITE_RENDERING_MODE_GDI_CLASSIC;
         fTextureType = DWRITE_TEXTURE_CLEARTYPE_3x1;
@@ -303,24 +331,33 @@ SkScalerContext_DW::SkScalerContext_DW(sk_sp<DWriteFontTypeface> typefaceRef,
         fMeasuringMode = DWRITE_MEASURING_MODE_GDI_CLASSIC;
 
     // If the font has a gasp table version 1, use it to determine symmetric rendering.
-    } else if (get_gasp_range(typeface, SkScalarRoundToInt(gdiTextSize), &range) &&
-               range.fVersion >= 1)
-    {
-        fTextSizeRender = realTextSize;
-        fRenderingMode = range.fFlags.field.SymmetricSmoothing
-                       ? DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC
-                       : DWRITE_RENDERING_MODE_NATURAL;
-        fTextureType = DWRITE_TEXTURE_CLEARTYPE_3x1;
-        fTextSizeMeasure = realTextSize;
-        fMeasuringMode = DWRITE_MEASURING_MODE_NATURAL;
-
-    // If the requested size is above 20px or there are no bytecode hints, use symmetric rendering.
-    } else if (realTextSize > SkIntToScalar(20) || !is_hinted(typeface)) {
+    } else if ((get_gasp_range(typeface, SkScalarRoundToInt(gdiTextSize), &range) &&
+                range.fVersion >= 1) ||
+               realTextSize > SkIntToScalar(20) || !is_hinted(this, typeface)) {
         fTextSizeRender = realTextSize;
         fRenderingMode = DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC;
         fTextureType = DWRITE_TEXTURE_CLEARTYPE_3x1;
         fTextSizeMeasure = realTextSize;
         fMeasuringMode = DWRITE_MEASURING_MODE_NATURAL;
+
+        DWriteFontTypeface* typeface = static_cast<DWriteFontTypeface*>(getTypeface());
+        switch (typeface->GetRenderingMode()) {
+        case DWRITE_RENDERING_MODE_NATURAL:
+        case DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC:
+            fRenderingMode = typeface->GetRenderingMode();
+            break;
+        default:
+            if (IDWriteRenderingParams* params = sk_get_dwrite_default_rendering_params()) {
+                typeface->fDWriteFontFace->GetRecommendedRenderingMode(
+                    fTextSizeRender, 1.0f, fMeasuringMode, params, &fRenderingMode);
+            }
+            break;
+        }
+
+        // We don't support outline mode right now.
+        if (fRenderingMode == DWRITE_RENDERING_MODE_OUTLINE) {
+            fRenderingMode = DWRITE_RENDERING_MODE_CLEARTYPE_NATURAL_SYMMETRIC;
+        }
 
     // Fonts with hints, no gasp or gasp version 0, and below 20px get non-symmetric rendering.
     // Often such fonts have hints which were only tested with GDI ClearType classic.
@@ -385,7 +422,7 @@ bool SkScalerContext_DW::generateAdvance(SkGlyph* glyph) {
     if (DWRITE_MEASURING_MODE_GDI_CLASSIC == fMeasuringMode ||
         DWRITE_MEASURING_MODE_GDI_NATURAL == fMeasuringMode)
     {
-        Exclusive l(DWriteFactoryMutex);
+        MaybeExclusive l(this);
         HRBM(this->getDWriteTypeface()->fDWriteFontFace->GetGdiCompatibleGlyphMetrics(
                  fTextSizeMeasure,
                  1.0f, // pixelsPerDip
@@ -397,14 +434,14 @@ bool SkScalerContext_DW::generateAdvance(SkGlyph* glyph) {
                  &gm),
              "Could not get gdi compatible glyph metrics.");
     } else {
-        Exclusive l(DWriteFactoryMutex);
+        MaybeExclusive l(this);
         HRBM(this->getDWriteTypeface()->fDWriteFontFace->GetDesignGlyphMetrics(&glyphId, 1, &gm),
              "Could not get design metrics.");
     }
 
     DWRITE_FONT_METRICS dwfm;
     {
-        Shared l(DWriteFactoryMutex);
+        MaybeShared l(this);
         this->getDWriteTypeface()->fDWriteFontFace->GetMetrics(&dwfm);
     }
     SkScalar advanceX = fTextSizeMeasure * gm.advanceWidth / dwfm.designUnitsPerEm;
@@ -453,7 +490,7 @@ HRESULT SkScalerContext_DW::getBoundingBox(SkGlyph* glyph,
 
     SkTScopedComPtr<IDWriteGlyphRunAnalysis> glyphRunAnalysis;
     {
-        Exclusive l(DWriteFactoryMutex);
+        MaybeExclusive l(this);
         // IDWriteFactory2::CreateGlyphRunAnalysis is very bad at aliased glyphs.
         if (this->getDWriteTypeface()->fFactory2 &&
                 (fGridFitMode == DWRITE_GRID_FIT_MODE_DISABLED ||
@@ -483,7 +520,7 @@ HRESULT SkScalerContext_DW::getBoundingBox(SkGlyph* glyph,
         }
     }
     {
-        Shared l(DWriteFactoryMutex);
+        MaybeShared l(this);
         HRM(glyphRunAnalysis->GetAlphaTextureBounds(textureType, bbox),
             "Could not get texture bounds.");
     }
@@ -552,7 +589,7 @@ void SkScalerContext_DW::generateColorMetrics(SkGlyph* glyph) {
         HRVM(SkDWriteGeometrySink::Create(&path, &geometryToPath),
             "Could not create geometry to path converter.");
         {
-            Exclusive l(DWriteFactoryMutex);
+            MaybeExclusive l(this);
             HRVM(colorGlyph->glyphRun.fontFace->GetGlyphRunOutline(
                     colorGlyph->glyphRun.fontEmSize,
                     colorGlyph->glyphRun.glyphIndices,
@@ -581,6 +618,7 @@ void SkScalerContext_DW::generateColorMetrics(SkGlyph* glyph) {
     glyph->fTop = ibounds.fTop;
 }
 
+#ifdef USE_PNG
 namespace {
 struct Context {
     SkTScopedComPtr<IDWriteFontFace4> fontFace4;
@@ -647,6 +685,7 @@ void SkScalerContext_DW::generatePngMetrics(SkGlyph* glyph) {
     glyph->fTop = bounds.top();
     return;
 }
+#endif
 
 void SkScalerContext_DW::generateMetrics(SkGlyph* glyph) {
 
@@ -691,8 +730,10 @@ void SkScalerContext_DW::generateMetrics(SkGlyph* glyph) {
     }
 
     if (fIsColorFont && isPngGlyph(*glyph)) {
+#ifdef USE_PNG
         glyph->fMaskFormat = SkMask::kARGB32_Format;
         generatePngMetrics(glyph);
+#endif
         return;
     }
 
@@ -860,10 +901,13 @@ void SkScalerContext_DW::RGBToA8(const uint8_t* SK_RESTRICT src,
 
     for (int y = 0; y < glyph.height(); y++) {
         for (int i = 0; i < width; i++) {
-            U8CPU r = *(src++);
-            U8CPU g = *(src++);
-            U8CPU b = *(src++);
-            dst[i] = sk_apply_lut_if<APPLY_PREBLEND>((r + g + b) / 3, table8);
+            U8CPU g = src[1];
+            src += 3;
+
+            // Ignore the R, B channels. It looks the closest to what
+            // D2D with grayscale AA has. But there's no way
+            // to just get a grayscale AA alpha texture from a glyph run.
+            dst[i] = sk_apply_lut_if<APPLY_PREBLEND>(g, table8);
         }
         dst = SkTAddOffset<uint8_t>(dst, dstRB);
     }
@@ -933,7 +977,7 @@ const void* SkScalerContext_DW::drawDWMask(const SkGlyph& glyph,
     {
         SkTScopedComPtr<IDWriteGlyphRunAnalysis> glyphRunAnalysis;
         {
-            Exclusive l(DWriteFactoryMutex);
+            MaybeExclusive l(this);
             // IDWriteFactory2::CreateGlyphRunAnalysis is very bad at aliased glyphs.
             if (this->getDWriteTypeface()->fFactory2 &&
                     (fGridFitMode == DWRITE_GRID_FIT_MODE_DISABLED ||
@@ -969,7 +1013,7 @@ const void* SkScalerContext_DW::drawDWMask(const SkGlyph& glyph,
         bbox.right = glyph.left() + glyph.width();
         bbox.bottom = glyph.top() + glyph.height();
         {
-            Shared l(DWriteFactoryMutex);
+            MaybeShared l(this);
             HRNM(glyphRunAnalysis->CreateAlphaTexture(textureType,
                     &bbox,
                     fBits.begin(),
@@ -1033,7 +1077,7 @@ void SkScalerContext_DW::generateColorGlyphImage(const SkGlyph& glyph) {
         HRVM(SkDWriteGeometrySink::Create(&path, &geometryToPath),
              "Could not create geometry to path converter.");
         {
-            Exclusive l(DWriteFactoryMutex);
+            MaybeExclusive l(this);
             HRVM(colorGlyph->glyphRun.fontFace->GetGlyphRunOutline(
                 colorGlyph->glyphRun.fontEmSize,
                 colorGlyph->glyphRun.glyphIndices,
@@ -1049,6 +1093,7 @@ void SkScalerContext_DW::generateColorGlyphImage(const SkGlyph& glyph) {
     }
 }
 
+#ifdef USE_PNG
 void SkScalerContext_DW::generatePngGlyphImage(const SkGlyph& glyph) {
     SkASSERT(isPngGlyph(glyph));
     SkASSERT(glyph.fMaskFormat == SkMask::Format::kARGB32_Format);
@@ -1090,6 +1135,7 @@ void SkScalerContext_DW::generatePngGlyphImage(const SkGlyph& glyph) {
     canvas.translate(-glyphData.horizontalLeftOrigin.x, -glyphData.horizontalLeftOrigin.y);
     canvas.drawImage(image, 0, 0, nullptr);
 }
+#endif
 
 void SkScalerContext_DW::generateImage(const SkGlyph& glyph) {
     //Create the mask.
@@ -1105,9 +1151,11 @@ void SkScalerContext_DW::generateImage(const SkGlyph& glyph) {
             if (isColorGlyph(glyph)) {
                 generateColorGlyphImage(glyph);
                 return;
+#ifdef USE_PNG
             } else if (isPngGlyph(glyph)) {
                 generatePngGlyphImage(glyph);
                 return;
+#endif
             }
         }
         SkDEBUGFAIL("Could not generate image from the given color font format.");
@@ -1168,7 +1216,7 @@ bool SkScalerContext_DW::generatePath(SkGlyphID glyph, SkPath* path) {
          "Could not create geometry to path converter.");
     UINT16 glyphId = SkTo<UINT16>(glyph);
     {
-        Exclusive l(DWriteFactoryMutex);
+        MaybeExclusive l(this);
         //TODO: convert to<->from DIUs? This would make a difference if hinting.
         //It may not be needed, it appears that DirectWrite only hints at em size.
         HRBM(this->getDWriteTypeface()->fDWriteFontFace->GetGlyphRunOutline(
