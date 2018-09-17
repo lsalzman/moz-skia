@@ -9,7 +9,7 @@
 #ifndef GrGLFunctions_DEFINED
 #define GrGLFunctions_DEFINED
 
-#include <cstring>
+#include <functional>
 #include "../private/SkTLogic.h"
 #include "GrGLTypes.h"
 
@@ -261,58 +261,6 @@ using GrEGLCreateImageFn = GrEGLImage GR_GL_FUNCTION_TYPE(GrEGLDisplay dpy, GrEG
 using GrEGLDestroyImageFn = GrEGLBoolean GR_GL_FUNCTION_TYPE(GrEGLDisplay dpy, GrEGLImage image);
 }  // extern "C"
 
-// This is a lighter-weight std::function, trying to reduce code size and compile time
-// by only supporting the exact use cases we require.
-template <typename T> class GrGLFunction;
-
-template <typename R, typename... Args>
-class GrGLFunction<R GR_GL_FUNCTION_TYPE(Args...)> {
-public:
-    using Fn = R GR_GL_FUNCTION_TYPE(Args...);
-    // Construct empty.
-    GrGLFunction() = default;
-    GrGLFunction(std::nullptr_t) {}
-
-    // Construct from a simple function pointer.
-    GrGLFunction(Fn* fn_ptr) {
-        static_assert(sizeof(fn_ptr) <= sizeof(fBuf), "fBuf is too small");
-        if (fn_ptr) {
-            memcpy(fBuf, &fn_ptr, sizeof(fn_ptr));
-            fCall = [](const void* buf, Args... args) {
-                return (*(Fn**)buf)(std::forward<Args>(args)...);
-            };
-        }
-    }
-
-    // Construct from a small closure.
-    template <typename Closure>
-    GrGLFunction(Closure closure) : GrGLFunction() {
-        static_assert(sizeof(Closure) <= sizeof(fBuf), "fBuf is too small");
-#if defined(__APPLE__)  // I am having serious trouble getting these to work with all STLs...
-        static_assert(std::is_trivially_copyable<Closure>::value, "");
-        static_assert(std::is_trivially_destructible<Closure>::value, "");
-#endif
-
-        memcpy(fBuf, &closure, sizeof(closure));
-        fCall = [](const void* buf, Args... args) {
-            auto closure = (const Closure*)buf;
-            return (*closure)(args...);
-        };
-    }
-
-    R operator()(Args... args) const {
-        SkASSERT(fCall);
-        return fCall(fBuf, std::forward<Args>(args)...);
-    }
-
-    explicit operator bool() const { return fCall != nullptr; }
-
-    void reset() { fCall = nullptr; }
-
-private:
-    using Call = R(const void* buf, Args...);
-    Call* fCall = nullptr;
-    size_t fBuf[4];
-};
+template <typename GLPTR> using GrGLFunction = std::function<skstd::remove_pointer_t<GLPTR>>;
 
 #endif
