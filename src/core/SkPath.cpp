@@ -565,6 +565,9 @@ bool SkPath::isRectContour(bool allowPartial, int* currVerb, const SkPoint** pts
                     *currVerb -= 1;  // try move again afterwards
                     goto addMissingClose;
                 }
+                if (pts != *ptsPtr) {
+                    return false;
+                }
                 if (!corners) {
                     firstPt = pts;
                 } else {
