@@ -105,7 +105,7 @@ enum SkColorType {
     kN32_SkColorType          = kRGBA_8888_SkColorType,//!< native ARGB 32-bit encoding
 
 #else
-    #error "SK_*32_SHIFT values must correspond to BGRA or RGBA byte order"
+    kN32_SkColorType = kBGRA_8888_SkColorType,
 #endif
 };
 

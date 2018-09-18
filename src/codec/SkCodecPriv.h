@@ -14,6 +14,7 @@
 #include "include/private/SkColorData.h"
 #include "include/private/SkEncodedInfo.h"
 #include "src/codec/SkColorTable.h"
+#include "src/core/SkEndian.h"
 
 #ifdef SK_PRINT_CODEC_MESSAGES
     #define SkCodecPrintf SkDebugf
