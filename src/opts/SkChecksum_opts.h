@@ -205,6 +205,8 @@ namespace SK_OPTS_NS {
     }
 #endif
 
+#undef unaligned_load
+
 }  // namespace SK_OPTS_NS
 
 #endif//SkChecksum_opts_DEFINED

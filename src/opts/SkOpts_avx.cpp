@@ -7,8 +7,11 @@
 
 #include "src/core/SkOpts.h"
 
+#ifdef __clang__
 #define SK_OPTS_NS avx
 #include "src/opts/SkRasterPipeline_opts.h"
+#endif
+
 #include "src/opts/SkUtils_opts.h"
 
 namespace SkOpts {
@@ -21,6 +24,7 @@ namespace SkOpts {
         rect_memset32 = SK_OPTS_NS::rect_memset32;
         rect_memset64 = SK_OPTS_NS::rect_memset64;
 
+#ifdef __clang__
     #define M(st) stages_highp[SkRasterPipeline::st] = (StageFn)SK_OPTS_NS::st;
         SK_RASTER_PIPELINE_STAGES(M)
         just_return_highp = (StageFn)SK_OPTS_NS::just_return;
@@ -32,5 +36,6 @@ namespace SkOpts {
         just_return_lowp = (StageFn)SK_OPTS_NS::lowp::just_return;
         start_pipeline_lowp = SK_OPTS_NS::lowp::start_pipeline;
     #undef M
+#endif
     }
 }
