@@ -99,6 +99,8 @@ namespace hsw {
 
 }
 
+#include "SkOpts.h"
+
 #define SK_OPTS_NS hsw
 #include "SkRasterPipeline_opts.h"
 #include "SkUtils_opts.h"

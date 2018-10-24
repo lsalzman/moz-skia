@@ -19,6 +19,7 @@
 
 namespace SK_OPTS_NS {
 
+#define unaligned_load checksum_unaligned_load
 template <typename T, typename P>
 static inline T unaligned_load(const P* p) {
     T v;
@@ -210,6 +211,8 @@ static inline T unaligned_load(const P* p) {
         return SkChecksum::Mix(hash);
     }
 #endif
+
+#undef unaligned_load
 
 }  // namespace SK_OPTS_NS
 
