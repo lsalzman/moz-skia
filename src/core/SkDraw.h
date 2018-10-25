@@ -125,7 +125,7 @@ public:
     static bool ShouldDrawTextAsPaths(const SkFont&, const SkPaint&, const SkMatrix&,
                                       SkScalar sizeLimit = 1024);
 
-    static SkScalar ComputeResScaleForStroking(const SkMatrix& );
+    static SkScalar ComputeResScaleForStroking(const SkMatrix& matrix, SkScalar* overscale = nullptr);
 private:
     void drawBitmapAsMask(const SkBitmap&, const SkPaint&) const;
 
