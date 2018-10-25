@@ -120,7 +120,7 @@ public:
     void        drawPosText_asPaths(const char text[], size_t byteLength, const SkScalar pos[],
                                     int scalarsPerPosition, const SkPoint& offset,
                                     const SkPaint&, const SkSurfaceProps*) const;
-    static SkScalar ComputeResScaleForStroking(const SkMatrix& );
+    static SkScalar ComputeResScaleForStroking(const SkMatrix& matrix, SkScalar* overscale = nullptr);
 private:
     void blitARGB32Mask(const SkMask& mask, const SkPaint& paint) const;
     SkGlyphRunListPainter::PerMask drawOneMaskCreator(
