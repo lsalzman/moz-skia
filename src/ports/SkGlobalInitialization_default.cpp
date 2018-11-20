@@ -6,6 +6,7 @@
  */
 
 #include "SkFlattenablePriv.h"
+#include "SkMaskFilter.h"
 #include "../../src/effects/SkDashImpl.h"
 #include "SkGradientShader.h"
 
