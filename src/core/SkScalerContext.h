@@ -256,6 +256,8 @@ public:
         kGenA8FromLCD_Flag        = 0x0800, // could be 0x200 (bit meaning dependent on fMaskFormat)
         kLinearMetrics_Flag       = 0x1000,
         kBaselineSnap_Flag        = 0x2000,
+
+        kLightOnDark_Flag         = 0x8000, // Moz + Mac only, used to distinguish different mask dilations
     };
 
     // computed values
