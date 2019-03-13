@@ -58,7 +58,7 @@ public:
         SkStrike* get() const;
         SkStrike* operator -> () const;
         SkStrike& operator *  () const;
-        explicit operator bool () const;
+        explicit operator bool () const { return fNode != nullptr; }
         friend bool operator == (const ExclusiveStrikePtr&, const ExclusiveStrikePtr&);
         friend bool operator == (const ExclusiveStrikePtr&, decltype(nullptr));
         friend bool operator == (decltype(nullptr), const ExclusiveStrikePtr&);

@@ -343,7 +343,7 @@ public:
         Edge            fEdge;
 
         // Returns true when it holds an Edge, false when the path is done.
-        operator bool() { return fPts != nullptr; }
+        MOZ_IMPLICIT operator bool() { return fPts != nullptr; }
     };
 
     Result next() {

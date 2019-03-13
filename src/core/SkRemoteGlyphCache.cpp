@@ -39,7 +39,7 @@ static SkDescriptor* auto_descriptor_from_desc(const SkDescriptor* source_desc,
         uint32_t size;
         auto ptr = source_desc->findEntry(kRec_SkDescriptorTag, &size);
         SkScalerContextRec rec;
-        std::memcpy(&rec, ptr, size);
+        memcpy(&rec, ptr, size);
         rec.fFontID = font_id;
         desc->addEntry(kRec_SkDescriptorTag, sizeof(rec), &rec);
     }

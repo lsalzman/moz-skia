@@ -40,7 +40,7 @@ struct ASTNode {
             return fValue != other.fValue;
         }
 
-        operator bool() const { return fValue >= 0; }
+        MOZ_IMPLICIT operator bool() const { return fValue >= 0; }
 
     private:
         ID()
@@ -476,7 +476,7 @@ struct ASTNode {
         , fOffset(offset)
         , fKind(kind) {}
 
-    operator bool() const {
+    MOZ_IMPLICIT operator bool() const {
         return fKind != Kind::kNull;
     }
 

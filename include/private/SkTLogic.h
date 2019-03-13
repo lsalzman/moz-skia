@@ -15,6 +15,7 @@
 #define SkTLogic_DEFINED
 
 #include <cstddef>
+#include <new> // see bug 981264
 #include <type_traits>
 
 namespace skstd {

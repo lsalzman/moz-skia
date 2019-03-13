@@ -23,7 +23,7 @@ public:
         Validator(sk_sp<SharedGenerator>, const SkIRect* subset, const SkColorType* colorType,
                   sk_sp<SkColorSpace> colorSpace);
 
-        operator bool() const { return fSharedGenerator.get(); }
+        MOZ_IMPLICIT operator bool() const { return fSharedGenerator.get(); }
 
         sk_sp<SharedGenerator> fSharedGenerator;
         SkImageInfo            fInfo;
