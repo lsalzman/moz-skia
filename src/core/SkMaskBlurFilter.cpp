@@ -112,7 +112,7 @@ public:
             auto buffer1Cursor = fBuffer1;
             auto buffer2Cursor = fBuffer2;
 
-            std::memset(fBuffer0, 0x00, (fBuffer2End - fBuffer0) * sizeof(*fBuffer0));
+            memset(fBuffer0, 0x00, (fBuffer2End - fBuffer0) * sizeof(*fBuffer0));
 
             uint32_t sum0 = 0;
             uint32_t sum1 = 0;
@@ -165,7 +165,7 @@ public:
             }
 
             // Starting from the right, fill in the rest of the buffer.
-            std::memset(fBuffer0, 0, (fBuffer2End - fBuffer0) * sizeof(*fBuffer0));
+            memset(fBuffer0, 0, (fBuffer2End - fBuffer0) * sizeof(*fBuffer0));
 
             sum0 = sum1 = sum2 = 0;
 

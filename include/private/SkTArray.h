@@ -598,7 +598,7 @@ public:
         : INHERITED(array, &fStorage) {
     }
 
-    explicit SkSTArray(INHERITED&& array)
+    SkSTArray(INHERITED&& array)
         : INHERITED(std::move(array), &fStorage) {
     }
 
