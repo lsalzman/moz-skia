@@ -110,6 +110,16 @@
 
 #define SK_USE_FREETYPE_EMBOLDEN
 
+#define SK_SUPPORT_GPU 0
+
+#ifndef MOZ_IMPLICIT
+#  ifdef MOZ_CLANG_PLUGIN
+#    define MOZ_IMPLICIT __attribute__((annotate("moz_implicit")))
+#  else
+#    define MOZ_IMPLICIT
+#  endif
+#endif
+
 #define SK_DISABLE_SLOW_DEBUG_VALIDATION 1
 
 #define SK_IGNORE_MAC_BLENDING_MATCH_FIX
