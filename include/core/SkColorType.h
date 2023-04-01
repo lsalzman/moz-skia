@@ -59,7 +59,7 @@ enum SkColorType : int {
     kN32_SkColorType          = kRGBA_8888_SkColorType,//!< native 32-bit RGBA encoding
 
 #else
-    #error "SK_*32_SHIFT values must correspond to BGRA or RGBA byte order"
+    kN32_SkColorType = kBGRA_8888_SkColorType,
 #endif
 };
 static constexpr int kSkColorTypeCnt = static_cast<int>(kLastEnum_SkColorType) + 1;
