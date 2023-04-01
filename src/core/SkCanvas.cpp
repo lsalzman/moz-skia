@@ -1609,12 +1609,14 @@ void SkCanvas::onClipRegion(const SkRegion& rgn, SkClipOp op) {
 
 void SkCanvas::validateClip() const {
 #ifdef SK_DEBUG
+#ifndef SK_DISABLE_SLOW_DEBUG_VALIDATION
     SkRect tmp = this->computeDeviceClipBounds();
     if (this->isClipEmpty()) {
         SkASSERT(fQuickRejectBounds.isEmpty());
     } else {
         SkASSERT(tmp == fQuickRejectBounds);
     }
+#endif
 #endif
 }
 
