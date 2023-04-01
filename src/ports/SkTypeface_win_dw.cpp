@@ -166,8 +166,8 @@ DWriteFontTypeface::DWriteFontTypeface(const SkFontStyle& style,
                                        const SkFontArguments::Palette& palette)
     : SkTypeface(style, false)
     , fFactory(SkRefComPtr(factory))
-    , fDWriteFontFamily(SkRefComPtr(fontFamily))
-    , fDWriteFont(SkRefComPtr(font))
+    , fDWriteFontFamily(SkSafeRefComPtr(fontFamily))
+    , fDWriteFont(SkSafeRefComPtr(font))
     , fDWriteFontFace(SkRefComPtr(fontFace))
     , fRequestedPaletteEntryOverrides(palette.overrideCount
         ? (SkFontArguments::Palette::Override*)memcpy(
@@ -179,6 +179,10 @@ DWriteFontTypeface::DWriteFontTypeface(const SkFontStyle& style,
                         fRequestedPaletteEntryOverrides.get(), palette.overrideCount }
     , fPaletteEntryCount(0)
     , fLoaders(std::move(loaders))
+    , fRenderingMode(DWRITE_RENDERING_MODE_DEFAULT)
+    , fGamma(2.2f)
+    , fContrast(1.0f)
+    , fClearTypeLevel(1.0f)
 {
     if (!SUCCEEDED(fDWriteFontFace->QueryInterface(&fDWriteFontFace1))) {
         // IUnknown::QueryInterface states that if it fails, punk will be set to nullptr.
@@ -191,11 +195,11 @@ DWriteFontTypeface::DWriteFontTypeface(const SkFontStyle& style,
     if (!SUCCEEDED(fDWriteFontFace->QueryInterface(&fDWriteFontFace4))) {
         SkASSERT_RELEASE(nullptr == fDWriteFontFace4.get());
     }
-#if DWRITE_CORE || (defined(NTDDI_WIN11_ZN) && NTDDI_VERSION >= NTDDI_WIN11_ZN)
+#if !SK_DISABLE_DIRECTWRITE_COLRv1 && (DWRITE_CORE || (defined(NTDDI_WIN11_ZN) && NTDDI_VERSION >= NTDDI_WIN11_ZN))
     if (!SUCCEEDED(fDWriteFontFace->QueryInterface(&fDWriteFontFace7))) {
         SkASSERT_RELEASE(nullptr == fDWriteFontFace7/*.get()*/);
     }
-#endif
+#endif  // !SK_DISABLE_DIRECTWRITE_COLRv1 && (DWRITE_CORE || (defined(NTDDI_WIN11_ZN) && NTDDI_VERSION >= NTDDI_WIN11_ZN))
     if (!SUCCEEDED(fFactory->QueryInterface(&fFactory2))) {
         SkASSERT_RELEASE(nullptr == fFactory2.get());
     }
@@ -209,11 +213,11 @@ DWriteFontTypeface::DWriteFontTypeface(const SkFontStyle& style,
 }
 
 DWriteFontTypeface::~DWriteFontTypeface() {
-#if DWRITE_CORE || (defined(NTDDI_WIN11_ZN) && NTDDI_VERSION >= NTDDI_WIN11_ZN)
+#if !SK_DISABLE_DIRECTWRITE_COLRv1 && (DWRITE_CORE || (defined(NTDDI_WIN11_ZN) && NTDDI_VERSION >= NTDDI_WIN11_ZN))
     if (fDWriteFontFace7) {
         fDWriteFontFace7->Release();
     }
-#endif
+#endif  // !SK_DISABLE_DIRECTWRITE_COLRv1 && (DWRITE_CORE || (defined(NTDDI_WIN11_ZN) && NTDDI_VERSION >= NTDDI_WIN11_ZN))
 }
 
 DWriteFontTypeface::Loaders::~Loaders() {
@@ -232,6 +236,9 @@ DWriteFontTypeface::Loaders::~Loaders() {
 }
 
 void DWriteFontTypeface::onGetFamilyName(SkString* familyName) const {
+    if (!fDWriteFontFamily) {
+        return;
+    }
     SkTScopedComPtr<IDWriteLocalizedStrings> familyNames;
     HRV(fDWriteFontFamily->GetFamilyNames(&familyNames));
 
@@ -242,7 +249,8 @@ bool DWriteFontTypeface::onGetPostScriptName(SkString* skPostScriptName) const {
     SkString localSkPostScriptName;
     SkTScopedComPtr<IDWriteLocalizedStrings> postScriptNames;
     BOOL exists = FALSE;
-    if (FAILED(fDWriteFont->GetInformationalStrings(
+    if (!fDWriteFont ||
+        FAILED(fDWriteFont->GetInformationalStrings(
                     DWRITE_INFORMATIONAL_STRING_POSTSCRIPT_NAME,
                     &postScriptNames,
                     &exists)) ||
@@ -681,6 +689,10 @@ void DWriteFontTypeface::onFilterRec(SkScalerContextRec* rec) const {
             rec->setContrast(defaultRenderingParams->GetEnhancedContrast());
         }
     }
+#elif defined(MOZ_SKIA)
+    rec->setContrast(fContrast);
+
+    rec->setDeviceGamma(fGamma);
 #endif
 }
 
@@ -752,20 +764,6 @@ std::unique_ptr<SkAdvancedTypefaceMetrics> DWriteFontTypeface::onGetAdvancedMetr
     info->fAscent = SkToS16(dwfm.ascent);
     info->fDescent = SkToS16(dwfm.descent);
     info->fCapHeight = SkToS16(dwfm.capHeight);
-
-    {
-        SkTScopedComPtr<IDWriteLocalizedStrings> postScriptNames;
-        BOOL exists = FALSE;
-        if (FAILED(fDWriteFont->GetInformationalStrings(
-                        DWRITE_INFORMATIONAL_STRING_POSTSCRIPT_NAME,
-                        &postScriptNames,
-                        &exists)) ||
-            !exists ||
-            FAILED(sk_get_locale_string(postScriptNames.get(), nullptr, &info->fPostScriptName)))
-        {
-            SkDEBUGF("Unable to get postscript name for typeface %p\n", this);
-        }
-    }
 
     DWRITE_FONT_FACE_TYPE fontType = fDWriteFontFace->GetType();
     if (fontType == DWRITE_FONT_FACE_TYPE_TRUETYPE ||
