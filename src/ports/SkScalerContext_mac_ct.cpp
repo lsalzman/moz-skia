@@ -267,6 +267,7 @@ CGRGBPixel* SkScalerContext_Mac::Offscreen::getCG(const SkScalerContext_Mac& con
     image += (fSize.fHeight - glyph.height()) * fSize.fWidth;
 
     // Erase to white (or transparent black if it's a color glyph, to not composite against white).
+    // For light-on-dark, instead erase to black.
     uint32_t bgColor = (!glyph.isColor()) ? 0xFFFFFFFF : 0x00000000;
     sk_memset_rect32(image, bgColor, glyph.width(), glyph.height(), rowBytes);
 
@@ -298,7 +299,9 @@ SkScalerContext::GlyphMetrics SkScalerContext_Mac::generateMetrics(const SkGlyph
                                                                    SkArenaAlloc*) {
     GlyphMetrics mx(glyph.maskFormat());
 
+#ifndef MOZ_SKIA
     mx.neverRequestPath = ((SkTypeface_Mac*)this->getTypeface())->fHasColorGlyphs;
+#endif
 
     const CGGlyph cgGlyph = (CGGlyph)glyph.getGlyphID();
 
@@ -331,7 +334,9 @@ SkScalerContext::GlyphMetrics SkScalerContext_Mac::generateMetrics(const SkGlyph
         // it should be empty. So, if we see a zero-advance, we check if it has an
         // empty path or not, and if so, we jam the bounds to 0. Hopefully a zero-advance
         // is rare, so we won't incur a big performance cost for this extra check.
-        if (0 == cgAdvance.width && 0 == cgAdvance.height) {
+        // Avoid trying to create a path from a color font due to crashing on 10.9.
+        if (0 == cgAdvance.width && 0 == cgAdvance.height &&
+            SkMask::kARGB32_Format != glyph.maskFormat()) {
             SkUniqueCFRef<CGPathRef> path(CTFontCreatePathForGlyph(fCTFont.get(), cgGlyph,nullptr));
             if (!path || CGPathIsEmpty(path.get())) {
                 return mx;
