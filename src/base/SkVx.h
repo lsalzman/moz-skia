@@ -73,7 +73,12 @@ template <int... Ix, int N, typename T>
 SI Vec<sizeof...(Ix),T> shuffle(const Vec<N,T>&);
 
 template <typename D, typename S>
-SI D bit_pun(const S&);
+SI D bit_pun(const S& s) {
+    static_assert(sizeof(D) == sizeof(S));
+    D d;
+    memcpy(&d, &s, sizeof(D));
+    return d;
+}
 
 // All Vec have the same simple memory layout, the same as `T vec[N]`.
 template <int N, typename T>
@@ -136,8 +141,125 @@ struct VecStorage<2,T> {
     Vec<1,T> lo, hi;
 };
 
+// Translate from a value type T to its corresponding Mask, the result of a comparison.
+template <typename T> struct Mask { using type = T; };
+template <> struct Mask<float > { using type = int32_t; };
+template <> struct Mask<double> { using type = int64_t; };
+template <typename T> using M = typename Mask<T>::type;
+
+template <int N, typename T>
+struct NoConversion { T vals[N]; };
+
+template <int N, typename T>
+struct ConvertNative {
+    typedef NoConversion<N, T> type;
+};
+
+#if SKVX_USE_SIMD && defined(__SSE__)
+template<>
+struct ConvertNative<4, float> {
+    typedef __m128 type;
+};
+
+template<>
+struct ConvertNative<4, int32_t> {
+    typedef __m128i type;
+};
+
+template <>
+struct ConvertNative<4, uint32_t> {
+    typedef __m128i type;
+};
+
+template<>
+struct ConvertNative<8, int16_t> {
+    typedef __m128i type;
+};
+
+template <>
+struct ConvertNative<8, uint16_t> {
+    typedef __m128i type;
+};
+
+template <>
+struct ConvertNative<16, uint8_t> {
+    typedef __m128i type;
+};
+#endif
+
+#if SKVX_USE_SIMD && defined(__AVX__)
+template<>
+struct ConvertNative<8, float> {
+    typedef __m256 type;
+};
+
+template<>
+struct ConvertNative<8, int32_t> {
+    typedef __m256i type;
+};
+
+template <>
+struct ConvertNative<8, uint32_t> {
+    typedef __m256i type;
+};
+
+template<>
+struct ConvertNative<16, int16_t> {
+    typedef __m256i type;
+};
+
+template <>
+struct ConvertNative<16, uint16_t> {
+    typedef __m256i type;
+};
+#endif
+
+#if SKVX_USE_SIMD && defined(__ARM_NEON)
+template<>
+struct ConvertNative<4, float> {
+    typedef float32x4_t type;
+};
+
+template<>
+struct ConvertNative<4, int32_t> {
+    typedef int32x4_t type;
+};
+
+template <>
+struct ConvertNative<4, uint32_t> {
+    typedef uint32x4_t type;
+};
+
+template<>
+struct ConvertNative<4, int16_t> {
+    typedef int16x4_t type;
+};
+
+template <>
+struct ConvertNative<4, uint16_t> {
+    typedef uint16x4_t type;
+};
+
+template<>
+struct ConvertNative<8, int16_t> {
+    typedef int16x8_t type;
+};
+
+template <>
+struct ConvertNative<8, uint16_t> {
+    typedef uint16x8_t type;
+};
+
+template <>
+struct ConvertNative<8, uint8_t> {
+    typedef uint8x8_t type;
+};
+#endif
+
 template <int N, typename T>
 struct alignas(N*sizeof(T)) Vec : public VecStorage<N,T> {
+    typedef T elem_type;
+
     static_assert((N & (N-1)) == 0,        "N must be a power of 2.");
     static_assert(sizeof(T) >= alignof(T), "What kind of unusual T is this?");
 
@@ -147,6 +269,7 @@ struct alignas(N*sizeof(T)) Vec : public VecStorage<N,T> {
     // Other operations on Vec should be defined outside the type.
 
     SKVX_ALWAYS_INLINE Vec() = default;
+    SKVX_ALWAYS_INLINE Vec(typename ConvertNative<N, T>::type native) : Vec(bit_pun<Vec>(native)) {}
 
     using VecStorage<N,T>::VecStorage;
 
@@ -159,6 +282,8 @@ struct alignas(N*sizeof(T)) Vec : public VecStorage<N,T> {
         this->lo = Vec<N/2,T>::Load(vals +   0);
         this->hi = Vec<N/2,T>::Load(vals + N/2);
     }
+
+    operator typename ConvertNative<N, T>::type() const { return bit_pun<typename ConvertNative<N, T>::type>(*this); }
 
     SKVX_ALWAYS_INLINE T  operator[](int i) const { return i<N/2 ? this->lo[i] : this->hi[i-N/2]; }
     SKVX_ALWAYS_INLINE T& operator[](int i)       { return i<N/2 ? this->lo[i] : this->hi[i-N/2]; }
@@ -175,6 +300,8 @@ struct alignas(N*sizeof(T)) Vec : public VecStorage<N,T> {
 
 template <typename T>
 struct Vec<1,T> {
+    typedef T elem_type;
+
     T val;
 
     SKVX_ALWAYS_INLINE Vec() = default;
@@ -195,20 +322,6 @@ struct Vec<1,T> {
         memcpy(ptr, this, sizeof(Vec));
     }
 };
-
-template <typename D, typename S>
-SI D bit_pun(const S& s) {
-    static_assert(sizeof(D) == sizeof(S));
-    D d;
-    memcpy(&d, &s, sizeof(D));
-    return d;
-}
-
-// Translate from a value type T to its corresponding Mask, the result of a comparison.
-template <typename T> struct Mask { using type = T; };
-template <> struct Mask<float > { using type = int32_t; };
-template <> struct Mask<double> { using type = int64_t; };
-template <typename T> using M = typename Mask<T>::type;
 
 // Join two Vec<N,T> into one Vec<2N,T>.
 SINT Vec<2*N,T> join(const Vec<N,T>& lo, const Vec<N,T>& hi) {
@@ -271,6 +384,12 @@ SINT Vec<2*N,T> join(const Vec<N,T>& lo, const Vec<N,T>& hi) {
     SINT Vec<N,T> operator|(const Vec<N,T>& x, const Vec<N,T>& y) {
         return to_vec<N,T>(to_vext(x) | to_vext(y));
     }
+    SINT Vec<N,T> operator&&(const Vec<N,T>& x, const Vec<N,T>& y) {
+        return to_vec<N,T>(to_vext(x) & to_vext(y));
+    }
+    SINT Vec<N,T> operator||(const Vec<N,T>& x, const Vec<N,T>& y) {
+        return to_vec<N,T>(to_vext(x) | to_vext(y));
+    }
 
     SINT Vec<N,T> operator!(const Vec<N,T>& x) { return to_vec<N,T>(!to_vext(x)); }
     SINT Vec<N,T> operator-(const Vec<N,T>& x) { return to_vec<N,T>(-to_vext(x)); }
@@ -312,6 +431,8 @@ SINT Vec<2*N,T> join(const Vec<N,T>& lo, const Vec<N,T>& hi) {
     SIT Vec<1,T> operator^(const Vec<1,T>& x, const Vec<1,T>& y) { return x.val ^ y.val; }
     SIT Vec<1,T> operator&(const Vec<1,T>& x, const Vec<1,T>& y) { return x.val & y.val; }
     SIT Vec<1,T> operator|(const Vec<1,T>& x, const Vec<1,T>& y) { return x.val | y.val; }
+    SIT Vec<1,T> operator&&(const Vec<1,T>& x, const Vec<1,T>& y) { return x.val & y.val; }
+    SIT Vec<1,T> operator||(const Vec<1,T>& x, const Vec<1,T>& y) { return x.val | y.val; }
 
     SIT Vec<1,T> operator!(const Vec<1,T>& x) { return !x.val; }
     SIT Vec<1,T> operator-(const Vec<1,T>& x) { return -x.val; }
@@ -362,6 +483,12 @@ SINT Vec<2*N,T> join(const Vec<N,T>& lo, const Vec<N,T>& hi) {
     SINT Vec<N,T> operator|(const Vec<N,T>& x, const Vec<N,T>& y) {
         return join(x.lo | y.lo, x.hi | y.hi);
     }
+    SINT Vec<N,T> operator&&(const Vec<N,T>& x, const Vec<N,T>& y) {
+        return join(x.lo & y.lo, x.hi & y.hi);
+    }
+    SINT Vec<N,T> operator||(const Vec<N,T>& x, const Vec<N,T>& y) {
+        return join(x.lo | y.lo, x.hi | y.hi);
+    }
 
     SINT Vec<N,T> operator!(const Vec<N,T>& x) { return join(!x.lo, !x.hi); }
     SINT Vec<N,T> operator-(const Vec<N,T>& x) { return join(-x.lo, -x.hi); }
@@ -398,6 +525,8 @@ SINTU Vec<N,T>    operator/ (U x, const Vec<N,T>& y) { return Vec<N,T>(x) /  y; 
 SINTU Vec<N,T>    operator^ (U x, const Vec<N,T>& y) { return Vec<N,T>(x) ^  y; }
 SINTU Vec<N,T>    operator& (U x, const Vec<N,T>& y) { return Vec<N,T>(x) &  y; }
 SINTU Vec<N,T>    operator| (U x, const Vec<N,T>& y) { return Vec<N,T>(x) |  y; }
+SINTU Vec<N,T>    operator&&(U x, const Vec<N,T>& y) { return Vec<N,T>(x) && y; }
+SINTU Vec<N,T>    operator||(U x, const Vec<N,T>& y) { return Vec<N,T>(x) || y; }
 SINTU Vec<N,M<T>> operator==(U x, const Vec<N,T>& y) { return Vec<N,T>(x) == y; }
 SINTU Vec<N,M<T>> operator!=(U x, const Vec<N,T>& y) { return Vec<N,T>(x) != y; }
 SINTU Vec<N,M<T>> operator<=(U x, const Vec<N,T>& y) { return Vec<N,T>(x) <= y; }
@@ -412,6 +541,8 @@ SINTU Vec<N,T>    operator/ (const Vec<N,T>& x, U y) { return x /  Vec<N,T>(y); 
 SINTU Vec<N,T>    operator^ (const Vec<N,T>& x, U y) { return x ^  Vec<N,T>(y); }
 SINTU Vec<N,T>    operator& (const Vec<N,T>& x, U y) { return x &  Vec<N,T>(y); }
 SINTU Vec<N,T>    operator| (const Vec<N,T>& x, U y) { return x |  Vec<N,T>(y); }
+SINTU Vec<N,T>    operator&&(const Vec<N,T>& x, U y) { return x && Vec<N,T>(y); }
+SINTU Vec<N,T>    operator||(const Vec<N,T>& x, U y) { return x || Vec<N,T>(y); }
 SINTU Vec<N,M<T>> operator==(const Vec<N,T>& x, U y) { return x == Vec<N,T>(y); }
 SINTU Vec<N,M<T>> operator!=(const Vec<N,T>& x, U y) { return x != Vec<N,T>(y); }
 SINTU Vec<N,M<T>> operator<=(const Vec<N,T>& x, U y) { return x <= Vec<N,T>(y); }
