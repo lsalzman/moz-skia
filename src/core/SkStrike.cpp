@@ -22,6 +22,7 @@
 #include "src/core/SkWriteBuffer.h"
 #include "src/text/StrikeForGPU.h"
 
+#include <cctype>
 #include <optional>
 
 #if defined(SK_GANESH)

@@ -72,7 +72,7 @@ static const SkSL::Type* find_type(const Context& context,
                                    std::string_view name,
                                    Position modifiersPos,
                                    Modifiers* modifiers) {
-    const Type* type = find_type(context, overallPos, name);
+    const auto* type = find_type(context, overallPos, name);
     return type->applyQualifiers(context, modifiers, ThreadContext::SymbolTable().get(),
                                  modifiersPos);
 }
@@ -299,7 +299,7 @@ DSLType StructType(std::string_view name,
         skslFields.emplace_back(field.fPosition, field.fModifiers.fModifiers, field.fName,
                                 &field.fType.skslType());
     }
-    std::unique_ptr<Type> newType = Type::MakeStructType(ThreadContext::Context(), pos, name,
+    auto newType = SkSL::Type::MakeStructType(ThreadContext::Context(), pos, name,
                                                          std::move(skslFields), interfaceBlock);
     return DSLType(ThreadContext::SymbolTable()->add(std::move(newType)), pos);
 }

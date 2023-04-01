@@ -1182,8 +1182,8 @@ Program::SlotData Program::allocateSlotData(SkArenaAlloc* alloc) const {
 
     // Store the temp stack immediately after the values.
     SlotData s;
-    s.values = SkSpan{slotPtr,        N * fNumValueSlots};
-    s.stack  = SkSpan{s.values.end(), N * fNumTempStackSlots};
+    s.values = SkSpan(slotPtr,        N * fNumValueSlots);
+    s.stack  = SkSpan(s.values.end(), N * fNumTempStackSlots);
     return s;
 }
 

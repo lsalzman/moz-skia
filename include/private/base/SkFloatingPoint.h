@@ -93,9 +93,13 @@ static inline bool sk_float_isinf(float x) {
     return SkFloatBits_IsInf(SkFloat2Bits(x));
 }
 
-static inline bool sk_float_isnan(float x) {
-    return !(x == x);
-}
+#ifdef SK_BUILD_FOR_WIN
+    #define sk_float_isnan(x)       _isnan(x)
+#elif defined(__clang__) || defined(__GNUC__)
+    #define sk_float_isnan(x)       __builtin_isnan(x)
+#else
+    #define sk_float_isnan(x)       isnan(x)
+#endif
 
 #define sk_double_isnan(a)          sk_float_isnan(a)
 
@@ -150,7 +154,11 @@ static inline int64_t sk_float_saturate2int64(float x) {
 // Cast double to float, ignoring any warning about too-large finite values being cast to float.
 // Clang thinks this is undefined, but it's actually implementation defined to return either
 // the largest float or infinity (one of the two bracketing representable floats).  Good enough!
+#ifdef __clang__
 SK_NO_SANITIZE("float-cast-overflow")
+#elif defined(__GNUC__)
+SK_ATTRIBUTE(no_sanitize_undefined)
+#endif
 static inline float sk_double_to_float(double x) {
     return static_cast<float>(x);
 }
@@ -196,12 +204,20 @@ static inline int sk_float_nextlog2(float x) {
 // IEEE defines how float divide behaves for non-finite values and zero-denoms, but C does not
 // so we have a helper that suppresses the possible undefined-behavior warnings.
 
+#ifdef __clang__
 SK_NO_SANITIZE("float-divide-by-zero")
+#elif defined(__GNUC__)
+SK_ATTRIBUTE(no_sanitize_undefined)
+#endif
 static inline float sk_ieee_float_divide(float numer, float denom) {
     return numer / denom;
 }
 
+#ifdef __clang__
 SK_NO_SANITIZE("float-divide-by-zero")
+#elif defined(__GNUC__)
+SK_ATTRIBUTE(no_sanitize_undefined)
+#endif
 static inline double sk_ieee_double_divide(double numer, double denom) {
     return numer / denom;
 }
