@@ -22,6 +22,10 @@
 #include <dwrite_2.h>
 #include <dwrite_3.h>
 
+#if !defined(__MINGW32__) && WINVER < 0x0A00
+#include "mozilla/gfx/dw-extra.h"
+#endif
+
 class SkFontDescriptor;
 struct SkScalerContextRec;
 
@@ -110,6 +114,28 @@ public:
             get_style(font), factory, fontFace, font, fontFamily, std::move(loaders), palette));
     }
 
+    static DWriteFontTypeface* Create(IDWriteFactory* factory,
+                                      IDWriteFontFace* fontFace,
+                                      SkFontStyle aStyle,
+                                      DWRITE_RENDERING_MODE aRenderingMode,
+                                      float aGamma,
+                                      float aContrast,
+                                      float aClearTypeLevel) {
+        DWriteFontTypeface* typeface =
+                new DWriteFontTypeface(aStyle, factory, fontFace,
+                                       nullptr, nullptr,
+                                       nullptr, SkFontArguments::Palette{0, nullptr, 0});
+        typeface->fRenderingMode = aRenderingMode;
+        typeface->fGamma = aGamma;
+        typeface->fContrast = aContrast;
+        typeface->fClearTypeLevel = aClearTypeLevel;
+        return typeface;
+    }
+
+    bool ForceGDI() const { return fRenderingMode == DWRITE_RENDERING_MODE_GDI_CLASSIC; }
+    DWRITE_RENDERING_MODE GetRenderingMode() const { return fRenderingMode; }
+    float GetClearTypeLevel() const { return fClearTypeLevel; }
+
 protected:
     void weak_dispose() const override {
         fLoaders.reset();
@@ -145,6 +171,10 @@ protected:
 private:
     mutable sk_sp<Loaders> fLoaders;
     using INHERITED = SkTypeface;
+    DWRITE_RENDERING_MODE fRenderingMode;
+    float fGamma;
+    float fContrast;
+    float fClearTypeLevel;
 };
 
 #endif

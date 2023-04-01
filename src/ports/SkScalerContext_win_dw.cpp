@@ -270,7 +270,9 @@ SkScalerContext_DW::SkScalerContext_DW(sk_sp<DWriteFontTypeface> typefaceRef,
     DWriteFontTypeface* typeface = this->getDWriteTypeface();
     fGlyphCount = typeface->fDWriteFontFace->GetGlyphCount();
 
-    // In general, all glyphs should use NATURAL_SYMMETRIC
+    fClearTypeLevel = int(typeface->GetClearTypeLevel() * 256);
+
+    // In general, all glyphs should use DWriteFontFace::GetRecommendedRenderingMode
     // except when bi-level rendering is requested or there are embedded
     // bi-level bitmaps (and the embedded bitmap flag is set and no rotation).
     //
@@ -336,7 +338,7 @@ SkScalerContext_DW::SkScalerContext_DW(sk_sp<DWriteFontTypeface> typefaceRef,
 
     // If we can use a bitmap, use gdi classic rendering and measurement.
     // This will not always provide a bitmap, but matches expected behavior.
-    } else if (treatLikeBitmap && axisAlignedBitmap) {
+    } else if ((treatLikeBitmap && axisAlignedBitmap) || typeface->ForceGDI()) {
         fTextSizeRender = gdiTextSize;
         fRenderingMode = DWRITE_RENDERING_MODE_GDI_CLASSIC;
         fTextureType = DWRITE_TEXTURE_CLEARTYPE_3x1;
@@ -352,26 +354,28 @@ SkScalerContext_DW::SkScalerContext_DW(sk_sp<DWriteFontTypeface> typefaceRef,
         fTextSizeMeasure = gdiTextSize;
         fMeasuringMode = DWRITE_MEASURING_MODE_GDI_CLASSIC;
 
+    // Force symmetric if the font is above the threshold or there is an explicit mode.
+    // Here we check if the size exceeds 20 before checking the GASP table to match the
+    // results of calling GetRecommendedRenderingMode/Direct2D, which skip looking at
+    // the GASP table if the text is too large.
+    } else if (realTextSize > SkIntToScalar(20) ||
+               typeface->GetRenderingMode() == DWRITE_RENDERING_MODE_NATURAL ||
+               typeface->GetRenderingMode() == DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC) {
+        fTextSizeRender = realTextSize;
+        fRenderingMode = typeface->GetRenderingMode() == DWRITE_RENDERING_MODE_NATURAL ?
+            DWRITE_RENDERING_MODE_NATURAL : DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC;
+        fTextureType = DWRITE_TEXTURE_CLEARTYPE_3x1;
+        fTextSizeMeasure = realTextSize;
+        fMeasuringMode = DWRITE_MEASURING_MODE_NATURAL;
     // If the font has a gasp table version 1, use it to determine symmetric rendering.
     } else if (get_gasp_range(typeface, SkScalarRoundToInt(gdiTextSize), &range) &&
-               range.fVersion >= 1)
-    {
+               range.fVersion >= 1) {
         fTextSizeRender = realTextSize;
-        fRenderingMode = range.fFlags.field.SymmetricSmoothing
-                       ? DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC
-                       : DWRITE_RENDERING_MODE_NATURAL;
+        fRenderingMode = !range.fFlags.field.SymmetricSmoothing ?
+            DWRITE_RENDERING_MODE_NATURAL : DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC;
         fTextureType = DWRITE_TEXTURE_CLEARTYPE_3x1;
         fTextSizeMeasure = realTextSize;
         fMeasuringMode = DWRITE_MEASURING_MODE_NATURAL;
-
-    // If the requested size is above 20px or there are no bytecode hints, use symmetric rendering.
-    } else if (realTextSize > SkIntToScalar(20) || !is_hinted(typeface)) {
-        fTextSizeRender = realTextSize;
-        fRenderingMode = DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC;
-        fTextureType = DWRITE_TEXTURE_CLEARTYPE_3x1;
-        fTextSizeMeasure = realTextSize;
-        fMeasuringMode = DWRITE_MEASURING_MODE_NATURAL;
-
     // Fonts with hints, no gasp or gasp version 0, and below 20px get non-symmetric rendering.
     // Often such fonts have hints which were only tested with GDI ClearType classic.
     // Some of these fonts rely on drop out control in the y direction in order to be legible.
@@ -382,8 +386,15 @@ SkScalerContext_DW::SkScalerContext_DW(sk_sp<DWriteFontTypeface> typefaceRef,
     //    https://na.leagueoflegends.com/en/news/game-updates/patch/patch-410-notes
     // See https://crbug.com/385897
     } else {
-        fTextSizeRender = gdiTextSize;
-        fRenderingMode = DWRITE_RENDERING_MODE_NATURAL;
+        if (is_hinted(typeface)) {
+          fTextSizeRender = gdiTextSize;
+          fRenderingMode = DWRITE_RENDERING_MODE_NATURAL;
+        } else {
+          // Unhinted but with no gasp and below 20px defaults to symmetric for
+          // GetRecommendedRenderingMode.
+          fTextSizeRender = realTextSize;
+          fRenderingMode = DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC;
+        }
         fTextureType = DWRITE_TEXTURE_CLEARTYPE_3x1;
         fTextSizeMeasure = realTextSize;
         fMeasuringMode = DWRITE_MEASURING_MODE_NATURAL;
@@ -673,6 +684,7 @@ bool SkScalerContext_DW::generateColorMetrics(SkGlyph* glyph) {
     return true;
 }
 
+#ifdef USE_SVG
 bool SkScalerContext_DW::generateSVGMetrics(SkGlyph* glyph) {
     SkPictureRecorder recorder;
     SkRect infiniteRect = SkRect::MakeLTRB(-SK_ScalarInfinity, -SK_ScalarInfinity,
@@ -689,7 +701,9 @@ bool SkScalerContext_DW::generateSVGMetrics(SkGlyph* glyph) {
     SetGlyphBounds(glyph, bounds);
     return true;
 }
+#endif
 
+#ifdef USE_PNG
 namespace {
 struct Context {
     SkTScopedComPtr<IDWriteFontFace4> fontFace4;
@@ -750,6 +764,7 @@ bool SkScalerContext_DW::generatePngMetrics(SkGlyph* glyph) {
     SetGlyphBounds(glyph, bounds);
     return true;
 }
+#endif
 
 void SkScalerContext_DW::generateMetrics(SkGlyph* glyph, SkArenaAlloc* alloc) {
 
@@ -794,19 +809,23 @@ void SkScalerContext_DW::generateMetrics(SkGlyph* glyph, SkArenaAlloc* alloc) {
             return;
         }
 
+#ifdef USE_SVG
         if (isSVGGlyph(*glyph) && generateSVGMetrics(glyph)) {
             glyph->fMaskFormat = SkMask::kARGB32_Format;
             glyph->fScalerContextBits |= ScalerContextBits::SVG;
             glyph->setPath(alloc, nullptr, false);
             return;
         }
+#endif
 
+#ifdef USE_PNG
         if (isPngGlyph(*glyph) && generatePngMetrics(glyph)) {
             glyph->fMaskFormat = SkMask::kARGB32_Format;
             glyph->fScalerContextBits |= ScalerContextBits::PNG;
             glyph->setPath(alloc, nullptr, false);
             return;
         }
+#endif
     }
 
     RECT bbox;
@@ -1012,10 +1031,13 @@ void SkScalerContext_DW::RGBToA8(const uint8_t* SK_RESTRICT src,
 
     for (int y = 0; y < glyph.height(); y++) {
         for (int i = 0; i < width; i++) {
-            U8CPU r = *(src++);
-            U8CPU g = *(src++);
-            U8CPU b = *(src++);
-            dst[i] = sk_apply_lut_if<APPLY_PREBLEND>((r + g + b) / 3, table8);
+            // Ignore the R, B channels. It looks the closest to what
+            // D2D with grayscale AA has. But there's no way
+            // to just get a grayscale AA alpha texture from a glyph run.
+            U8CPU g = src[1];
+            src += 3;
+
+            dst[i] = sk_apply_lut_if<APPLY_PREBLEND>(g, table8);
             if constexpr (kSkShowTextBlitCoverage) {
                 dst[i] = std::max<U8CPU>(0x30, dst[i]);
             }
@@ -1027,14 +1049,14 @@ void SkScalerContext_DW::RGBToA8(const uint8_t* SK_RESTRICT src,
 template<bool APPLY_PREBLEND, bool RGB>
 void SkScalerContext_DW::RGBToLcd16(const uint8_t* SK_RESTRICT src, const SkGlyph& glyph,
                                     const uint8_t* tableR, const uint8_t* tableG,
-                                    const uint8_t* tableB) {
+                                    const uint8_t* tableB, int clearTypeLevel) {
     const size_t dstRB = glyph.rowBytes();
     const int width = glyph.width();
     uint16_t* SK_RESTRICT dst = static_cast<uint16_t*>(glyph.fImage);
 
     for (int y = 0; y < glyph.height(); y++) {
         for (int i = 0; i < width; i++) {
-            U8CPU r, g, b;
+            int r, g, b;
             if (RGB) {
                 r = sk_apply_lut_if<APPLY_PREBLEND>(*(src++), tableR);
                 g = sk_apply_lut_if<APPLY_PREBLEND>(*(src++), tableG);
@@ -1049,6 +1071,8 @@ void SkScalerContext_DW::RGBToLcd16(const uint8_t* SK_RESTRICT src, const SkGlyp
                 g = std::max<U8CPU>(0x30, g);
                 b = std::max<U8CPU>(0x30, b);
             }
+            r = g + (((r - g) * clearTypeLevel) >> 8);
+            b = g + (((b - g) * clearTypeLevel) >> 8);
             dst[i] = SkPack888ToRGB16(r, g, b);
         }
         dst = SkTAddOffset<uint16_t>(dst, dstRB);
@@ -1286,6 +1310,7 @@ bool SkScalerContext_DW::generateSVGGlyphImage(const SkGlyph& glyph) {
     return this->drawSVGGlyphImage(glyph, canvas);
 }
 
+#ifdef USE_PNG
 bool SkScalerContext_DW::drawPngGlyphImage(const SkGlyph& glyph, SkCanvas& canvas) {
     IDWriteFontFace4* fontFace4 = this->getDWriteTypeface()->fDWriteFontFace4.get();
     DWRITE_GLYPH_IMAGE_DATA glyphData;
@@ -1335,6 +1360,7 @@ bool SkScalerContext_DW::generatePngGlyphImage(const SkGlyph& glyph) {
 
     return this->drawPngGlyphImage(glyph, canvas);
 }
+#endif
 
 void SkScalerContext_DW::generateImage(const SkGlyph& glyph) {
     ScalerContextBits::value_type format = glyph.fScalerContextBits & ScalerContextBits::FormatMask;
@@ -1342,14 +1368,18 @@ void SkScalerContext_DW::generateImage(const SkGlyph& glyph) {
         this->generateColorGlyphImage(glyph);
         return;
     }
+#ifdef USE_SVG
     if (format == ScalerContextBits::SVG) {
         this->generateSVGGlyphImage(glyph);
         return;
     }
+#endif
+#ifdef USE_PNG
     if (format == ScalerContextBits::PNG) {
         this->generatePngGlyphImage(glyph);
         return;
     }
+#endif
     if (format == ScalerContextBits::PATH) {
         const SkPath* devPath = glyph.path();
         SkASSERT_RELEASE(devPath);
@@ -1400,15 +1430,15 @@ void SkScalerContext_DW::generateImage(const SkGlyph& glyph) {
         SkASSERT(SkMask::kLCD16_Format == glyph.fMaskFormat);
         if (fPreBlend.isApplicable()) {
             if (fRec.fFlags & SkScalerContext::kLCD_BGROrder_Flag) {
-                RGBToLcd16<true, false>(src, glyph, fPreBlend.fR, fPreBlend.fG, fPreBlend.fB);
+                RGBToLcd16<true, false>(src, glyph, fPreBlend.fR, fPreBlend.fG, fPreBlend.fB, fClearTypeLevel);
             } else {
-                RGBToLcd16<true, true>(src, glyph, fPreBlend.fR, fPreBlend.fG, fPreBlend.fB);
+                RGBToLcd16<true, true>(src, glyph, fPreBlend.fR, fPreBlend.fG, fPreBlend.fB, fClearTypeLevel);
             }
         } else {
             if (fRec.fFlags & SkScalerContext::kLCD_BGROrder_Flag) {
-                RGBToLcd16<false, false>(src, glyph, fPreBlend.fR, fPreBlend.fG, fPreBlend.fB);
+                RGBToLcd16<false, false>(src, glyph, fPreBlend.fR, fPreBlend.fG, fPreBlend.fB, fClearTypeLevel);
             } else {
-                RGBToLcd16<false, true>(src, glyph, fPreBlend.fR, fPreBlend.fG, fPreBlend.fB);
+                RGBToLcd16<false, true>(src, glyph, fPreBlend.fR, fPreBlend.fG, fPreBlend.fB, fClearTypeLevel);
             }
         }
     }

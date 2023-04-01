@@ -91,8 +91,8 @@ DWriteFontTypeface::DWriteFontTypeface(const SkFontStyle& style,
                                        const SkFontArguments::Palette& palette)
     : SkTypeface(style, false)
     , fFactory(SkRefComPtr(factory))
-    , fDWriteFontFamily(SkRefComPtr(fontFamily))
-    , fDWriteFont(SkRefComPtr(font))
+    , fDWriteFontFamily(SkSafeRefComPtr(fontFamily))
+    , fDWriteFont(SkSafeRefComPtr(font))
     , fDWriteFontFace(SkRefComPtr(fontFace))
     , fRequestedPaletteEntryOverrides(palette.overrideCount
         ? (SkFontArguments::Palette::Override*)memcpy(
@@ -104,6 +104,10 @@ DWriteFontTypeface::DWriteFontTypeface(const SkFontStyle& style,
                         fRequestedPaletteEntryOverrides.get(), palette.overrideCount }
     , fPaletteEntryCount(0)
     , fLoaders(std::move(loaders))
+    , fRenderingMode(DWRITE_RENDERING_MODE_DEFAULT)
+    , fGamma(2.2f)
+    , fContrast(1.0f)
+    , fClearTypeLevel(1.0f)
 {
     if (!SUCCEEDED(fDWriteFontFace->QueryInterface(&fDWriteFontFace1))) {
         // IUnknown::QueryInterface states that if it fails, punk will be set to nullptr.
@@ -550,6 +554,11 @@ void DWriteFontTypeface::onFilterRec(SkScalerContextRec* rec) const {
             rec->setContrast(defaultRenderingParams->GetEnhancedContrast());
         }
     }
+#elif defined(MOZ_SKIA)
+    rec->setContrast(fContrast);
+
+    rec->setDeviceGamma(fGamma);
+    rec->setPaintGamma(fGamma);
 #endif
 }
 
