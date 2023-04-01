@@ -176,7 +176,8 @@ SkScalerContext_Mac::Offscreen::Offscreen(SkColor foregroundColor)
 CGRGBPixel* SkScalerContext_Mac::Offscreen::getCG(const SkScalerContext_Mac& context,
                                                   const SkGlyph& glyph, CGGlyph glyphID,
                                                   size_t* rowBytesPtr,
-                                                  bool generateA8FromLCD) {
+                                                  bool generateA8FromLCD,
+                                                  bool lightOnDark) {
     if (!fRGBSpace) {
         //It doesn't appear to matter what color space is specified.
         //Regular blends and antialiased text are always (s*a + d*(1-a))
@@ -240,7 +241,8 @@ CGRGBPixel* SkScalerContext_Mac::Offscreen::getCG(const SkScalerContext_Mac& con
 
         if (SkMask::kARGB32_Format != glyph.maskFormat()) {
             // Draw black on white to create mask. (Special path exists to speed this up in CG.)
-            CGContextSetGrayFillColor(fCG.get(), 0.0f, 1.0f);
+            // If light-on-dark is requested, draw white on black.
+            CGContextSetGrayFillColor(fCG.get(), lightOnDark ? 1.0f : 0.0f, 1.0f);
         } else {
             CGContextSetFillColorWithColor(fCG.get(), fCGForegroundColor.get());
         }
@@ -266,7 +268,8 @@ CGRGBPixel* SkScalerContext_Mac::Offscreen::getCG(const SkScalerContext_Mac& con
     image += (fSize.fHeight - glyph.height()) * fSize.fWidth;
 
     // Erase to white (or transparent black if it's a color glyph, to not composite against white).
-    uint32_t bgColor = (!glyph.isColor()) ? 0xFFFFFFFF : 0x00000000;
+    // For light-on-dark, instead erase to black.
+    uint32_t bgColor = (!glyph.isColor()) ? (lightOnDark ? 0xFF000000 : 0xFFFFFFFF) : 0x00000000;
     sk_memset_rect32(image, bgColor, glyph.width(), glyph.height(), rowBytes);
 
     float subX = 0;
@@ -300,9 +303,11 @@ bool SkScalerContext_Mac::generateAdvance(SkGlyph* glyph) {
 void SkScalerContext_Mac::generateMetrics(SkGlyph* glyph, SkArenaAlloc* alloc) {
     glyph->fMaskFormat = fRec.fMaskFormat;
 
+#ifndef MOZ_SKIA
     if (((SkTypeface_Mac*)this->getTypeface())->fHasColorGlyphs) {
         glyph->setPath(alloc, nullptr, false);
     }
+#endif
 
     const CGGlyph cgGlyph = (CGGlyph) glyph->getGlyphID();
     glyph->zeroMetrics();
@@ -336,7 +341,9 @@ void SkScalerContext_Mac::generateMetrics(SkGlyph* glyph, SkArenaAlloc* alloc) {
         // it should be empty. So, if we see a zero-advance, we check if it has an
         // empty path or not, and if so, we jam the bounds to 0. Hopefully a zero-advance
         // is rare, so we won't incur a big performance cost for this extra check.
-        if (0 == cgAdvance.width && 0 == cgAdvance.height) {
+        // Avoid trying to create a path from a color font due to crashing on 10.9.
+        if (0 == cgAdvance.width && 0 == cgAdvance.height &&
+            SkMask::kARGB32_Format != glyph->fMaskFormat) {
             SkUniqueCFRef<CGPathRef> path(CTFontCreatePathForGlyph(fCTFont.get(), cgGlyph,nullptr));
             if (!path || CGPathIsEmpty(path.get())) {
                 return;
@@ -481,10 +488,11 @@ void SkScalerContext_Mac::generateImage(const SkGlyph& glyph) {
 
     // FIXME: lcd smoothed un-hinted rasterization unsupported.
     bool requestSmooth = fRec.getHinting() != SkFontHinting::kNone;
+    bool lightOnDark = (fRec.fFlags & SkScalerContext::kLightOnDark_Flag) != 0;
 
     // Draw the glyph
     size_t cgRowBytes;
-    CGRGBPixel* cgPixels = fOffscreen.getCG(*this, glyph, cgGlyph, &cgRowBytes, requestSmooth);
+    CGRGBPixel* cgPixels = fOffscreen.getCG(*this, glyph, cgGlyph, &cgRowBytes, requestSmooth, lightOnDark);
     if (cgPixels == nullptr) {
         return;
     }
@@ -505,10 +513,16 @@ void SkScalerContext_Mac::generateImage(const SkGlyph& glyph) {
         CGRGBPixel* addr = cgPixels;
         for (int y = 0; y < glyph.fHeight; ++y) {
             for (int x = 0; x < glyph.fWidth; ++x) {
-                int r = (addr[x] >> 16) & 0xFF;
-                int g = (addr[x] >>  8) & 0xFF;
-                int b = (addr[x] >>  0) & 0xFF;
-                addr[x] = (linear[r] << 16) | (linear[g] << 8) | linear[b];
+                int r = linear[(addr[x] >> 16) & 0xFF];
+                int g = linear[(addr[x] >>  8) & 0xFF];
+                int b = linear[(addr[x] >>  0) & 0xFF];
+                // If light-on-dark was requested, the mask is drawn inverted.
+                if (lightOnDark) {
+                    r = 255 - r;
+                    g = 255 - g;
+                    b = 255 - b;
+                }
+                addr[x] = (r << 16) | (g << 8) | b;
             }
             addr = SkTAddOffset<CGRGBPixel>(addr, cgRowBytes);
         }

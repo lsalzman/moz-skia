@@ -92,6 +92,8 @@ public:
     const OpszVariation fOpszVariation;
     const bool fHasColorGlyphs;
 
+    bool hasColorGlyphs() const override { return fHasColorGlyphs; }
+
     /**
      * CTFontCopyVariationAxes provides the localized name of all axes, making it very slow.
      * This is unfortunate, its result is needed just to see if there are any axes at all.

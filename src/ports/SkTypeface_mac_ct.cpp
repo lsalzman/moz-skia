@@ -187,6 +187,9 @@ SkUniqueCFRef<CTFontRef> SkCTFontCreateExactCopy(CTFontRef baseFont, CGFloat tex
 
     if (opszVariation.isSet) {
         add_opsz_attr(attr.get(), opszVariation.value);
+#ifdef MOZ_SKIA
+    }
+#else
     } else {
         // On (at least) 10.10 though 10.14 the default system font was SFNSText/SFNSDisplay.
         // The CTFont is backed by both; optical size < 20 means SFNSText else SFNSDisplay.
@@ -210,8 +213,79 @@ SkUniqueCFRef<CTFontRef> SkCTFontCreateExactCopy(CTFontRef baseFont, CGFloat tex
         add_opsz_attr(attr.get(), opsz_val);
     }
     add_notrak_attr(attr.get());
+#endif
+
+    // To figure out if a font is installed locally or used from a @font-face
+    // resource, we check whether its descriptor can provide a URL. This will
+    // be present for installed fonts, but not for those activated from an
+    // in-memory resource.
+    auto IsInstalledFont = [](CTFontRef aFont) {
+        CTFontDescriptorRef desc = CTFontCopyFontDescriptor(aFont);
+        CFTypeRef attr = CTFontDescriptorCopyAttribute(desc, kCTFontURLAttribute);
+        CFRelease(desc);
+        bool result = false;
+        if (attr) {
+            result = true;
+            CFRelease(attr);
+        }
+        return result;
+    };
+
+    SkUniqueCFRef<CGFontRef> baseCGFont;
+
+    // If we have a system font we need to use the CGFont APIs to avoid having the
+    // underlying font change for us when using CTFontCreateCopyWithAttributes.
+    if (IsInstalledFont(baseFont)) {
+        baseCGFont.reset(CTFontCopyGraphicsFont(baseFont, nullptr));
+
+        // The last parameter (CTFontDescriptorRef attributes) *must* be nullptr.
+        // If non-nullptr then with fonts with variation axes, the copy will fail in
+        // CGFontVariationFromDictCallback when it assumes kCGFontVariationAxisName is CFNumberRef
+        // which it quite obviously is not.
+
+        // Because we cannot setup the CTFont descriptor to match, the same restriction applies here
+        // as other uses of CTFontCreateWithGraphicsFont which is that such CTFonts should not escape
+        // the scaler context, since they aren't 'normal'.
+
+        // Avoid calling potentially buggy variation APIs on pre-Sierra macOS
+        // versions (see bug 1331683).
+        //
+        // And on HighSierra, CTFontCreateWithGraphicsFont properly carries over
+        // variation settings from the CGFont to CTFont, so we don't need to do
+        // the extra work here -- and this seems to avoid Core Text crashiness
+        // seen in bug 1454094.
+        //
+        // However, for installed fonts it seems we DO need to copy the variations
+        // explicitly even on 10.13, otherwise fonts fail to render (as in bug
+        // 1455494) when non-default values are used. Fortunately, the crash
+        // mentioned above occurs with data fonts, not (AFAICT) with system-
+        // installed fonts.
+        //
+        // So we only need to do this "the hard way" on Sierra, and for installed
+        // fonts on HighSierra+; otherwise, just let the standard CTFont function
+        // do its thing.
+        //
+        // NOTE in case this ever needs further adjustment: there is similar logic
+        // in four places in the tree (sadly):
+        //    CreateCTFontFromCGFontWithVariations in gfxMacFont.cpp
+        //    CreateCTFontFromCGFontWithVariations in ScaledFontMac.cpp
+        //    CreateCTFontFromCGFontWithVariations in cairo-quartz-font.c
+        //    ctfont_create_exact_copy in SkFontHost_mac.cpp
+
+        // Not UniqueCFRef<> because CGFontCopyVariations can return null!
+        CFDictionaryRef variations = CGFontCopyVariations(baseCGFont.get());
+        if (variations) {
+            CFDictionarySetValue(attr.get(), kCTFontVariationAttribute, variations);
+            CFRelease(variations);
+        }
+    }
 
     SkUniqueCFRef<CTFontDescriptorRef> desc(CTFontDescriptorCreateWithAttributes(attr.get()));
+
+    if (baseCGFont.get()) {
+        return SkUniqueCFRef<CTFontRef>(
+          CTFontCreateWithGraphicsFont(baseCGFont.get(), textSize, nullptr, desc.get()));
+    }
 
     return SkUniqueCFRef<CTFontRef>(
             CTFontCreateCopyWithAttributes(baseFont, textSize, nullptr, desc.get()));
@@ -1014,6 +1088,21 @@ void SkTypeface_Mac::onFilterRec(SkScalerContextRec* rec) const {
         rec->fMaskFormat = SkMask::kARGB32_Format;
     }
 
+    // Smoothing will be used if the format is either LCD or if there is hinting.
+    // In those cases, we need to choose the proper dilation mask based on the color.
+    if (rec->fMaskFormat == SkMask::kLCD16_Format ||
+        (rec->fMaskFormat == SkMask::kA8_Format && rec->getHinting() != SkFontHinting::kNone)) {
+        SkColor color = rec->getLuminanceColor();
+        int r = SkColorGetR(color);
+        int g = SkColorGetG(color);
+        int b = SkColorGetB(color);
+        // Choose whether to draw using a light-on-dark mask based on observed
+        // color/luminance thresholds that CoreText uses.
+        if (r >= 85 && g >= 85 && b >= 85 && r + g + b >= 2 * 255) {
+            rec->fFlags |= SkScalerContext::kLightOnDark_Flag;
+        }
+    }
+
     // Unhinted A8 masks (those not derived from LCD masks) must respect SK_GAMMA_APPLY_TO_A8.
     // All other masks can use regular gamma.
     if (SkMask::kA8_Format == rec->fMaskFormat && SkFontHinting::kNone == rec->getHinting()) {
@@ -1022,6 +1111,7 @@ void SkTypeface_Mac::onFilterRec(SkScalerContextRec* rec) const {
         rec->ignorePreBlend();
 #endif
     } else {
+#ifndef SK_IGNORE_MAC_BLENDING_MATCH_FIX
         SkColor color = rec->getLuminanceColor();
         if (smoothBehavior == SkCTFontSmoothBehavior::some) {
             // CoreGraphics smoothed text without subpixel coverage blitting goes from a gamma of
@@ -1039,6 +1129,7 @@ void SkTypeface_Mac::onFilterRec(SkScalerContextRec* rec) const {
                                   SkColorGetB(color) * 3/4);
         }
         rec->setLuminanceColor(color);
+#endif
 
         // CoreGraphics dialates smoothed text to provide contrast.
         rec->setContrast(0);
