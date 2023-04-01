@@ -1873,7 +1873,8 @@ SkScalar SkMatrixPriv::ComputeResScaleForStroking(const SkMatrix& matrix) {
     if (SkScalarsAreFinite(sx, sy)) {
         SkScalar scale = std::max(sx, sy);
         if (scale > 0) {
-            return scale;
+            static const SkScalar kMaxStrokeScale = 1e5f;
+            return std::min(scale, kMaxStrokeScale);
         }
     }
     return 1;
