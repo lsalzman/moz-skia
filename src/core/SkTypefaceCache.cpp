@@ -14,19 +14,23 @@
 SkTypefaceCache::SkTypefaceCache() {}
 
 void SkTypefaceCache::add(sk_sp<SkTypeface> face) {
+#ifndef SK_DISABLE_TYPEFACE_CACHE
     if (fTypefaces.size() >= TYPEFACE_CACHE_LIMIT) {
         this->purge(TYPEFACE_CACHE_LIMIT >> 2);
     }
 
     fTypefaces.emplace_back(std::move(face));
+#endif
 }
 
 sk_sp<SkTypeface> SkTypefaceCache::findByProcAndRef(FindProc proc, void* ctx) const {
+#ifndef SK_DISABLE_TYPEFACE_CACHE
     for (const sk_sp<SkTypeface>& typeface : fTypefaces) {
         if (proc(typeface.get(), ctx)) {
             return typeface;
         }
     }
+#endif
     return nullptr;
 }
 
@@ -68,18 +72,26 @@ static SkMutex& typeface_cache_mutex() {
 }
 
 void SkTypefaceCache::Add(sk_sp<SkTypeface> face) {
+#ifndef SK_DISABLE_TYPEFACE_CACHE
     SkAutoMutexExclusive ama(typeface_cache_mutex());
     Get().add(std::move(face));
+#endif
 }
 
 sk_sp<SkTypeface> SkTypefaceCache::FindByProcAndRef(FindProc proc, void* ctx) {
+#ifndef SK_DISABLE_TYPEFACE_CACHE
     SkAutoMutexExclusive ama(typeface_cache_mutex());
     return Get().findByProcAndRef(proc, ctx);
+#else
+    return nullptr;
+#endif
 }
 
 void SkTypefaceCache::PurgeAll() {
+#ifndef SK_DISABLE_TYPEFACE_CACHE
     SkAutoMutexExclusive ama(typeface_cache_mutex());
     Get().purgeAll();
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
