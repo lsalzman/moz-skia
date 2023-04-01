@@ -15,6 +15,7 @@
 #include "include/private/SkEncodedInfo.h"
 #include "src/codec/SkColorPalette.h"
 #include "src/core/SkColorData.h"
+#include "src/base/SkEndian.h"
 
 #include <string_view>
 
