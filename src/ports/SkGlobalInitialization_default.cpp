@@ -14,31 +14,10 @@
 
 #else
 
-    #include "include/core/SkBBHFactory.h"
-    #include "include/core/SkColorFilter.h"
-    #include "include/core/SkPathEffect.h"
-    #include "include/effects/Sk1DPathEffect.h"
-    #include "include/effects/Sk2DPathEffect.h"
-    #include "include/effects/SkCornerPathEffect.h"
-    #include "include/effects/SkDiscretePathEffect.h"
-    #include "include/effects/SkImageFilters.h"
-    #include "include/effects/SkOverdrawColorFilter.h"
-    #include "include/effects/SkPerlinNoiseShader.h"
-    #include "include/effects/SkRuntimeEffect.h"
-    #include "include/effects/SkShaderMaskFilter.h"
-    #include "src/core/SkBlendModeBlender.h"
+    #include "include/core/SkMaskFilter.h"
     #include "src/core/SkImageFilter_Base.h"
-    #include "src/core/SkLocalMatrixImageFilter.h"
-    #include "src/core/SkRecordedDrawable.h"
+    #include "src/effects/colorfilters/SkColorFilterBase.h"
     #include "src/effects/SkDashImpl.h"
-    #include "src/effects/SkEmbossMaskFilter.h"
-    #include "src/effects/SkTrimPE.h"
-    #include "src/shaders/SkBitmapProcShader.h"
-    #include "src/shaders/SkColorFilterShader.h"
-    #include "src/shaders/SkImageShader.h"
-    #include "src/shaders/SkLocalMatrixShader.h"
-    #include "src/shaders/SkPictureShader.h"
-    #include "src/shaders/SkShaderBase.h"
     #include "src/shaders/gradients/SkGradientBaseShader.h"
 
     /**
@@ -50,52 +29,22 @@
      */
     void SkFlattenable::PrivateInitializer::InitEffects() {
         // Shaders.
-        SkRegisterBlendShaderFlattenable();
-        SkRegisterColor4ShaderFlattenable();
-        SK_REGISTER_FLATTENABLE(SkColorFilterShader);
-        SkRegisterColorShaderFlattenable();
-        SkRegisterCoordClampShaderFlattenable();
-        SkRegisterEmptyShaderFlattenable();
-        SK_REGISTER_FLATTENABLE(SkLocalMatrixShader);
-        SK_REGISTER_FLATTENABLE(SkPictureShader);
-        SkRegisterConicalGradientShaderFlattenable();
         SkRegisterLinearGradientShaderFlattenable();
         SkRegisterRadialGradientShaderFlattenable();
         SkRegisterSweepGradientShaderFlattenable();
-        SkRegisterPerlinNoiseShaderFlattenable();
-        SkShaderBase::RegisterFlattenables();
+        SkRegisterConicalGradientShaderFlattenable();
 
         // Color filters.
-        SkRegisterMatrixColorFilterFlattenable();
         SkRegisterComposeColorFilterFlattenable();
         SkRegisterModeColorFilterFlattenable();
         SkRegisterSkColorSpaceXformColorFilterFlattenable();
         SkRegisterWorkingFormatColorFilterFlattenable();
-        SkRegisterTableColorFilterFlattenable();
-
-        // Blenders.
-        SK_REGISTER_FLATTENABLE(SkBlendModeBlender);
-
-        // Runtime shaders, color filters, and blenders.
-        SkRuntimeEffect::RegisterFlattenables();
 
         // Mask filters.
-        SK_REGISTER_FLATTENABLE(SkEmbossMaskFilter);
         SkMaskFilter::RegisterFlattenables();
-        SkShaderMaskFilter::RegisterFlattenables();
 
         // Path effects.
-        SkCornerPathEffect::RegisterFlattenables();
         SK_REGISTER_FLATTENABLE(SkDashImpl);
-        SkDiscretePathEffect::RegisterFlattenables();
-        SkLine2DPathEffect::RegisterFlattenables();
-        SkPath2DPathEffect::RegisterFlattenables();
-        SkPath1DPathEffect::RegisterFlattenables();
-        SK_REGISTER_FLATTENABLE(SkTrimPE);
-        SkPathEffectBase::RegisterFlattenables();
-
-        // Misc.
-        SK_REGISTER_FLATTENABLE(SkRecordedDrawable);
     }
 
     /*
@@ -108,23 +57,8 @@
     void SkFlattenable::PrivateInitializer::InitImageFilters() {
         SkRegisterBlendImageFilterFlattenable();
         SkRegisterBlurImageFilterFlattenable();
-        SkRegisterColorFilterImageFilterFlattenable();
         SkRegisterComposeImageFilterFlattenable();
         SkRegisterCropImageFilterFlattenable();
-        SkRegisterDisplacementMapImageFilterFlattenable();
-        SkRegisterImageImageFilterFlattenable();
-        SkRegisterLightingImageFilterFlattenables();
-        SkRegisterMagnifierImageFilterFlattenable();
-        SkRegisterMatrixConvolutionImageFilterFlattenable();
-        SkRegisterMatrixTransformImageFilterFlattenable();
-        SkRegisterMergeImageFilterFlattenable();
-        SkRegisterMorphologyImageFilterFlattenables();
-        SkRegisterPictureImageFilterFlattenable();
-        SkRegisterRuntimeImageFilterFlattenable();
-        SkRegisterShaderImageFilterFlattenable();
-        SK_REGISTER_FLATTENABLE(SkLocalMatrixImageFilter);
-
-        SkRegisterLegacyDropShadowImageFilterFlattenable();
     }
 
 #endif
