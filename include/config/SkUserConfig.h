@@ -152,12 +152,21 @@
 
 #define SK_DISABLE_TYPEFACE_CACHE
 
+#define SK_USE_FREETYPE_EMBOLDEN
+
 #ifndef MOZ_IMPLICIT
 #  ifdef MOZ_CLANG_PLUGIN
 #    define MOZ_IMPLICIT __attribute__((annotate("moz_implicit")))
 #  else
 #    define MOZ_IMPLICIT
 #  endif
+#endif
+
+#define SK_GAMMA_EXPONENT 1.0
+#define SK_GAMMA_CONTRAST 0.0
+
+#if defined(SK_BUILD_FOR_UNIX) || defined(SK_BUILD_FOR_ANDROID)
+#  define SK_GAMMA_APPLY_TO_A8
 #endif
 
 #endif
