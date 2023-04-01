@@ -331,6 +331,7 @@ SkScalar SkContourMeasureIter::Impl::compute_line_seg(SkPoint p0, SkPoint p1, Sk
 
 #ifdef SK_DEBUG
 void SkContourMeasureIter::Impl::validate() const {
+#ifndef SK_DISABLE_SLOW_DEBUG_VALIDATION
     const SkContourMeasure::Segment* seg = fSegments.begin();
     const SkContourMeasure::Segment* stop = fSegments.end();
     unsigned ptIndex = 0;
@@ -353,6 +354,7 @@ void SkContourMeasureIter::Impl::validate() const {
         ptIndex = seg->fPtIndex;
         seg += 1;
     }
+#endif
 }
 #endif
 
