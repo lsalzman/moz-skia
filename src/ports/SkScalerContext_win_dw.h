@@ -67,7 +67,8 @@ private:
 
     template<bool APPLY_PREBLEND, bool RGB>
     static void RGBToLcd16(const uint8_t* SK_RESTRICT src, const SkGlyph& glyph, void* dst,
-                           const uint8_t* tableR, const uint8_t* tableG, const uint8_t* tableB);
+                           const uint8_t* tableR, const uint8_t* tableG, const uint8_t* tableB,
+                           int clearTypeLevel);
 
     DWriteFontTypeface* getDWriteTypeface() {
         return static_cast<DWriteFontTypeface*>(this->getTypeface());
@@ -111,6 +112,7 @@ private:
     DWRITE_MEASURING_MODE fMeasuringMode;
     DWRITE_TEXT_ANTIALIAS_MODE fAntiAliasMode;
     DWRITE_GRID_FIT_MODE fGridFitMode;
+    int fClearTypeLevel;
 };
 
 #endif
