@@ -112,6 +112,7 @@ sk_sp<SkImage> mask_to_greyscale_image(SkMaskBuilder* mask) {
     SkPixmap pm(SkImageInfo::Make(mask->fBounds.width(), mask->fBounds.height(),
                                   kGray_8_SkColorType, kOpaque_SkAlphaType),
                 mask->fImage, mask->fRowBytes);
+#ifndef MOZ_SKIA
     const int imgQuality = SK_PDF_MASK_QUALITY;
     if (imgQuality <= 100 && imgQuality >= 0) {
         SkDynamicMemoryWStream buffer;
@@ -125,6 +126,7 @@ sk_sp<SkImage> mask_to_greyscale_image(SkMaskBuilder* mask) {
             }
         }
     }
+#endif
     if (!img) {
         img = SkImages::RasterFromPixmap(
                 pm, [](const void* p, void*) { SkMaskBuilder::FreeImage(const_cast<void*>(p)); }, nullptr);

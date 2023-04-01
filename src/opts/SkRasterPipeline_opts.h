@@ -38,6 +38,12 @@
 #if defined(__clang__)
     template <int N, typename T> using Vec = T __attribute__((ext_vector_type(N)));
 #elif defined(__GNUC__)
+    #ifndef __has_builtin
+        #define JUMPER_IS_SCALAR
+    #elif !__has_builtin(__builtin_convertvector)
+        #define JUMPER_IS_SCALAR
+    #endif
+
     // Unfortunately, GCC does not allow us to omit the struct. This will not compile:
     //   template <int N, typename T> using Vec = T __attribute__((vector_size(N*sizeof(T))));
     template <int N, typename T> struct VecHelper {

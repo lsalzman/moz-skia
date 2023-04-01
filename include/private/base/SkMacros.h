@@ -38,6 +38,17 @@
     #define SK_END_REQUIRE_DENSE
 #endif
 
+#ifdef MOZ_SKIA
+
+  #ifdef MOZ_ASAN
+  #include "mozilla/MemoryChecking.h"
+  #define SK_INTENTIONALLY_LEAKED(X) MOZ_LSAN_INTENTIONALLY_LEAK_OBJECT(X)
+  #else
+  #define SK_INTENTIONALLY_LEAKED(x) ((void)0)
+  #endif
+
+#else // !MOZ_SKIA
+
 #if defined(__clang__) && defined(__has_feature)
     // Some compilers have a preprocessor that does not appear to do short-circuit
     // evaluation as expected
@@ -54,6 +65,8 @@ extern "C" {
 #else
     #define SK_INTENTIONALLY_LEAKED(X) ((void)0)
 #endif
+
+#endif // MOZ_SKIA
 
 #define SK_INIT_TO_AVOID_WARNING    = 0
 

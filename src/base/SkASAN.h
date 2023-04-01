@@ -10,6 +10,24 @@
 
 #include <cstddef>
 
+#ifdef MOZ_SKIA
+
+#include "mozilla/MemoryChecking.h"
+
+#ifdef MOZ_HAVE_MEM_CHECKS
+#define SK_SANITIZE_ADDRESS MOZ_HAVE_MEM_CHECKS
+#endif
+
+static inline void sk_asan_poison_memory_region(void const volatile *addr, size_t size) {
+    MOZ_MAKE_MEM_NOACCESS(addr, size);
+}
+
+static inline void sk_asan_unpoison_memory_region(void const volatile *addr, size_t size) {
+    MOZ_MAKE_MEM_DEFINED(addr, size);
+}
+
+#else // !MOZ_SKIA
+
 #ifdef __SANITIZE_ADDRESS__
     #define SK_SANITIZE_ADDRESS 1
 #endif
@@ -41,5 +59,7 @@ static inline void sk_asan_unpoison_memory_region(void const volatile *addr, siz
     __asan_unpoison_memory_region(addr, size);
 #endif
 }
+
+#endif // !MOZ_SKIA
 
 #endif  // SkASAN_DEFINED

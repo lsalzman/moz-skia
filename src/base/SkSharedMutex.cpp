@@ -47,6 +47,10 @@
         #define DYNAMIC_ANNOTATIONS_ATTRIBUTE_WEAK
     #endif
 
+#ifdef __GNUC__
+#pragma GCC visibility push(default)
+#endif
+
     extern "C" {
     void AnnotateRWLockCreate(
         const char *file, int line,
@@ -61,6 +65,10 @@
         const char *file, int line,
         const volatile void *lock, long is_w) DYNAMIC_ANNOTATIONS_ATTRIBUTE_WEAK;
     }
+
+#ifdef __GNUC__
+#pragma GCC visibility pop
+#endif
 
 #else
 

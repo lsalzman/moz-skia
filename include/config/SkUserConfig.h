@@ -146,4 +146,6 @@
 #  endif
 #endif
 
+#define SK_DISABLE_LEGACY_IMAGE_READBUFFER
+
 #endif
