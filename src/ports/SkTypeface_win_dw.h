@@ -23,6 +23,10 @@
 #include <dwrite_2.h>
 #include <dwrite_3.h>
 
+#if !defined(__MINGW32__) && WINVER < 0x0A00
+#include "mozilla/gfx/dw-extra.h"
+#endif
+
 class SkFontDescriptor;
 struct SkScalerContextRec;
 
@@ -83,6 +87,7 @@ public:
     SkTScopedComPtr<IDWriteFontFace3> fDWriteFontFace3; // With this family and font are not needed
     SkTScopedComPtr<IDWriteFontFace4> fDWriteFontFace4;
     SkTScopedComPtr<IDWriteFontFace5> fDWriteFontFace5;
+#if !SK_DISABLE_DIRECTWRITE_COLRv1 && (DWRITE_CORE || (defined(NTDDI_WIN11_ZN) && NTDDI_VERSION >= NTDDI_WIN11_ZN))
     // Once WDK 10.0.25357.0 or newer is required to build, fDWriteFontFace7 can be a smart pointer.
     // If a smart pointer is used then ~DWriteFontTypeface must call the smart pointer's destructor,
     // which must include code to Release the IDWriteFontFace7, but there may be no IDWriteFontFace7
@@ -92,6 +97,7 @@ public:
     // NTDDI_VERSION shenanigains, otherwise this definition could just be ifdef'ed.
     //SkTScopedComPtr<IDWriteFontFace7> fDWriteFontFace7;
     IDWriteFontFace7* fDWriteFontFace7 = nullptr;
+#endif  // !SK_DISABLE_DIRECTWRITE_COLRv1 && (DWRITE_CORE || (defined(NTDDI_WIN11_ZN) && NTDDI_VERSION >= NTDDI_WIN11_ZN))
     bool fIsColorFont;
 
     std::unique_ptr<SkFontArguments::Palette::Override> fRequestedPaletteEntryOverrides;
@@ -109,6 +115,31 @@ public:
         IDWriteFontFamily* fontFamily,
         sk_sp<Loaders> loaders,
         const SkFontArguments::Palette& palette);
+
+    static DWriteFontTypeface* Create(IDWriteFactory* factory,
+                                      IDWriteFontFace* fontFace,
+                                      IDWriteFont* font,
+                                      IDWriteFontFamily* fontFamily,
+                                      SkFontStyle aStyle,
+                                      DWRITE_RENDERING_MODE aRenderingMode,
+                                      float aGamma,
+                                      float aContrast,
+                                      float aClearTypeLevel) {
+        DWriteFontTypeface* typeface =
+                new DWriteFontTypeface(aStyle, factory, fontFace,
+                                       font, fontFamily,
+                                       /* loaders = */ nullptr,
+                                       SkFontArguments::Palette{0, nullptr, 0});
+        typeface->fRenderingMode = aRenderingMode;
+        typeface->fGamma = aGamma;
+        typeface->fContrast = aContrast;
+        typeface->fClearTypeLevel = aClearTypeLevel;
+        return typeface;
+    }
+
+    bool ForceGDI() const { return fRenderingMode == DWRITE_RENDERING_MODE_GDI_CLASSIC; }
+    DWRITE_RENDERING_MODE GetRenderingMode() const { return fRenderingMode; }
+    float GetClearTypeLevel() const { return fClearTypeLevel; }
 
 protected:
     void weak_dispose() const override {
@@ -147,6 +178,10 @@ protected:
 private:
     mutable sk_sp<Loaders> fLoaders;
     using INHERITED = SkTypeface;
+    DWRITE_RENDERING_MODE fRenderingMode;
+    float fGamma;
+    float fContrast;
+    float fClearTypeLevel;
 };
 
 #endif

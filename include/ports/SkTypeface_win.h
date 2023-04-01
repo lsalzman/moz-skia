@@ -49,8 +49,26 @@ SK_API void SkTypeface_SetEnsureLOGFONTAccessibleProc(void (*)(const LOGFONT&));
 //
 class SkFontMgr;
 struct IDWriteFactory;
+struct IDWriteFont;
 struct IDWriteFontCollection;
+struct IDWriteFontFace;
 struct IDWriteFontFallback;
+struct IDWriteFontFamily;
+
+/**
+ *  Like the other Typeface create methods, this returns a new reference to the
+ *  corresponding typeface for the specified dwrite font. The caller is responsible
+ *  for calling unref() when it is finished.
+ */
+SK_API SkTypeface* SkCreateTypefaceFromDWriteFont(IDWriteFactory* aFactory,
+                                                  IDWriteFontFace* aFontFace,
+                                                  IDWriteFont* aFont,
+                                                  IDWriteFontFamily* aFontFamily,
+                                                  SkFontStyle aStyle,
+                                                  int aRenderingMode,
+                                                  float aGamma,
+                                                  float aContrast,
+                                                  float aClearTypeLevel);
 
 SK_API sk_sp<SkFontMgr> SkFontMgr_New_GDI();
 SK_API sk_sp<SkFontMgr> SkFontMgr_New_DirectWrite(IDWriteFactory* factory = nullptr,
