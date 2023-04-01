@@ -25,23 +25,23 @@
 #include <utility>
 
 #include <ft2build.h>
-#include <freetype/freetype.h>
-#include <freetype/ftbitmap.h>
+#include FT_FREETYPE_H
+#include FT_BITMAP_H
 #ifdef FT_COLOR_H
-#   include <freetype/ftcolor.h>
+#   include FT_COLOR_H
 #endif
-#include <freetype/ftimage.h>
-#include <freetype/ftoutln.h>
-#include <freetype/ftsizes.h>
+#include FT_IMAGE_H
+#include FT_OUTLINE_H
+#include FT_SIZES_H
 // In the past, FT_GlyphSlot_Own_Bitmap was defined in this header file.
-#include <freetype/ftsynth.h>
+#include FT_SYNTHESIS_H
 
 namespace {
 [[maybe_unused]] static inline const constexpr bool kSkShowTextBlitCoverage = false;
 }
 
 #if defined(FT_CONFIG_OPTION_SVG)
-#   include <freetype/otsvg.h>
+#   include FT_OTSVG_H
 #endif
 
 #ifdef TT_SUPPORT_COLRV1
@@ -72,6 +72,10 @@ namespace {
 #ifndef FT_LOAD_COLOR
 #    define FT_LOAD_COLOR ( 1L << 20 )
 #    define FT_PIXEL_MODE_BGRA 7
+#endif
+
+#ifndef FT_LOAD_BITMAP_METRICS_ONLY
+#    define FT_LOAD_BITMAP_METRICS_ONLY ( 1L << 22 )
 #endif
 
 #ifdef SK_DEBUG

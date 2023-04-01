@@ -137,6 +137,8 @@
 
 #define SK_DISABLE_TYPEFACE_CACHE
 
+#define SK_USE_FREETYPE_EMBOLDEN
+
 #ifndef MOZ_IMPLICIT
 #  ifdef MOZ_CLANG_PLUGIN
 #    define MOZ_IMPLICIT __attribute__((annotate("moz_implicit")))
