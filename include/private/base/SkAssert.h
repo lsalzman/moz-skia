@@ -16,6 +16,7 @@
     an exception or otherwise exit.
 */
 [[noreturn]] SK_API extern void sk_abort_no_print(void);
+SK_API extern bool sk_abort_is_enabled();
 
 #if defined(SK_BUILD_FOR_GOOGLE3)
     void SkDebugfForDumpStackTrace(const char* data, void* unused);
@@ -35,12 +36,12 @@
 #    define SK_DUMP_LINE_FORMAT "%s:%d"
 #  endif
 #  define SK_ABORT(message, ...) \
-    do { \
+    do { if (sk_abort_is_enabled()) { \
         SkDebugf(SK_DUMP_LINE_FORMAT ": fatal error: \"" message "\"\n", \
                  __FILE__, __LINE__, ##__VA_ARGS__); \
         SK_DUMP_GOOGLE3_STACK(); \
         sk_abort_no_print(); \
-    } while (false)
+    } } while (false)
 #endif
 
 // SkASSERT, SkASSERTF and SkASSERT_RELEASE can be used as stand alone assertion expressions, e.g.

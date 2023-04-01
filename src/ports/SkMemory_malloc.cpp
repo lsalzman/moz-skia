@@ -44,6 +44,8 @@ static inline void* throw_on_failure(size_t size, void* p) {
     return p;
 }
 
+bool sk_abort_is_enabled() { return true; }
+
 void sk_abort_no_print() {
 #if defined(SK_DEBUG) && defined(SK_BUILD_FOR_WIN)
     __fastfail(FAST_FAIL_FATAL_APP_EXIT);
