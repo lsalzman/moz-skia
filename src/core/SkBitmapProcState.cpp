@@ -278,16 +278,17 @@ bool SkBitmapProcState::chooseProcs() {
     }
     SkASSERT(fSampleProc32);
 
+    fShaderProc32 = this->chooseShaderProc32();
+
     // our special-case shaderprocs
     // TODO: move this one into chooseShaderProc32() or pull all that in here.
-    if (fAlphaScale == 256
+    if (nullptr == fShaderProc32
+            && fAlphaScale == 256
             && !fBilerp
             && SkTileMode::kClamp == fTileModeX
             && SkTileMode::kClamp == fTileModeY
             && fInvMatrix.isScaleTranslate()) {
         fShaderProc32 = Clamp_S32_opaque_D32_nofilter_DX_shaderproc;
-    } else {
-        fShaderProc32 = this->chooseShaderProc32();
     }
 
     return true;
