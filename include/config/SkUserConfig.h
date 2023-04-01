@@ -138,4 +138,30 @@
 // #define SKVX_DISABLE_SIMD
 // #define SKRP_CPU_SCALAR
 
+#define MOZ_SKIA
+
+// On all platforms we have this byte order
+#define SK_A32_SHIFT 24
+#define SK_R32_SHIFT 16
+#define SK_G32_SHIFT 8
+#define SK_B32_SHIFT 0
+
+#define SK_ALLOW_STATIC_GLOBAL_INITIALIZERS 0
+
+#define SK_RASTERIZE_EVEN_ROUNDING
+
+#define I_ACKNOWLEDGE_SKIA_DOES_NOT_SUPPORT_BIG_ENDIAN
+
+#define SK_SUPPORT_GPU 0
+
+#define SK_DISABLE_LEGACY_PNG_WRITEBUFFER
+
+#ifndef MOZ_IMPLICIT
+#  ifdef MOZ_CLANG_PLUGIN
+#    define MOZ_IMPLICIT __attribute__((annotate("moz_implicit")))
+#  else
+#    define MOZ_IMPLICIT
+#  endif
+#endif
+
 #endif
