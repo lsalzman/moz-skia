@@ -49,6 +49,7 @@
     an exception or otherwise exit.
 */
 [[noreturn]] SK_API extern void sk_abort_no_print(void);
+SK_API extern bool sk_abort_is_enabled();
 
 #if defined(SK_BUILD_FOR_GOOGLE3)
     void SkDebugfForDumpStackTrace(const char* data, void* unused);
@@ -74,6 +75,10 @@
         SK_DUMP_GOOGLE3_STACK(); \
         sk_abort_no_print(); \
     } while (false)
+#  define SK_MAYBE_ABORT(message, ...) \
+    do { if (sk_abort_is_enabled()) { \
+        SK_ABORT(message, ##__VA_ARGS__); \
+    } } while(false)
 #endif
 
 // SkASSERT, SkASSERTF and SkASSERT_RELEASE can be used as standalone assertion expressions, e.g.
@@ -90,27 +95,27 @@
 #define SkASSERT_RELEASE(cond) \
     static_cast<void>( __builtin_expect(static_cast<bool>(cond), 1) \
         ? static_cast<void>(0) \
-        : []{ SK_ABORT("check(%s)", #cond); }() )
+        : []{ SK_MAYBE_ABORT("check(%s)", #cond); }() )
 
 #define SkASSERTF_RELEASE(cond, fmt, ...)                                  \
     static_cast<void>( __builtin_expect(static_cast<bool>(cond), 1)        \
         ? static_cast<void>(0)                                             \
-        : [&]{ SK_ABORT("assertf(%s): " fmt, #cond, ##__VA_ARGS__); }() )
+        : [&]{ SK_MAYBE_ABORT("assertf(%s): " fmt, #cond, ##__VA_ARGS__); }() )
 #else
 #define SkASSERT_RELEASE(cond) \
-    static_cast<void>( (cond) ? static_cast<void>(0) : []{ SK_ABORT("check(%s)", #cond); }() )
+    static_cast<void>( (cond) ? static_cast<void>(0) : []{ SK_MAYBE_ABORT("check(%s)", #cond); }() )
 
 #define SkASSERTF_RELEASE(cond, fmt, ...)                                   \
     static_cast<void>( (cond)                                               \
         ? static_cast<void>(0)                                              \
-        : [&]{ SK_ABORT("assertf(%s): " fmt, #cond, ##__VA_ARGS__); }() )
+        : [&]{ SK_MAYBE_ABORT("assertf(%s): " fmt, #cond, ##__VA_ARGS__); }() )
 #endif
 
 #if defined(SK_DEBUG)
     #define SkASSERT(cond)            SkASSERT_RELEASE(cond)
     #define SkASSERTF(cond, fmt, ...) SkASSERTF_RELEASE(cond, fmt, ##__VA_ARGS__)
-    #define SkDEBUGFAIL(message)      SK_ABORT("%s", message)
-    #define SkDEBUGFAILF(fmt, ...)    SK_ABORT(fmt, ##__VA_ARGS__)
+    #define SkDEBUGFAIL(message)      SK_MAYBE_ABORT("%s", message)
+    #define SkDEBUGFAILF(fmt, ...)    SK_MAYBE_ABORT(fmt, ##__VA_ARGS__)
     #define SkAssertResult(cond)      SkASSERT(cond)
 #else
     #define SkASSERT(cond)            static_cast<void>(0)
