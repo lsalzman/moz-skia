@@ -251,6 +251,9 @@ std::optional<SkPathPriv::RectContour> SkPathPriv::IsRectContour(SkSpan<const Sk
                     currVerb -= 1;  // try move again afterwards
                     goto addMissingClose;
                 }
+                if (pts != ptSpan.data()) {
+                    return {};
+                }
                 if (!corners) {
                     firstPt = pts;
                 } else {
