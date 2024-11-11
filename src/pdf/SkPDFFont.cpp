@@ -812,6 +812,7 @@ static void emit_subset_type3(const SkPDFFont& pdfFont, SkPDFDocument* doc) {
                 content.writeText(" cm\n");
 
                 // Convert Gray image to jpeg if needed
+#ifndef MOZ_SKIA
                 if (pdfStrike.fHasMaskFilter) {
                     SkJpegEncoder::Options jpegOptions;
                     jpegOptions.fQuality = 50; // SK_PDF_MASK_QUALITY
@@ -825,6 +826,7 @@ static void emit_subset_type3(const SkPDFFont& pdfFont, SkPDFDocument* doc) {
                         }
                     }
                 }
+#endif
 
                 // Draw image into a Form XObject
                 const SkISize imageSize = pimg.fImage->dimensions();

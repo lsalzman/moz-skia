@@ -301,6 +301,9 @@ void do_deflated_image(const SkPixmap& pm,
 
 bool do_jpeg(sk_sp<SkData> data, SkColorSpace* imageColorSpace, SkPDFDocument* doc, SkISize size,
              SkPDFIndirectReference ref) {
+#ifdef MOZ_SKIA
+    return false;
+#else
     static constexpr const SkCodecs::Decoder decoders[] = {
         SkJpegDecoder::Decoder(),
     };
@@ -353,6 +356,7 @@ bool do_jpeg(sk_sp<SkData> data, SkColorSpace* imageColorSpace, SkPDFDocument* d
                       jpegSize, std::move(colorSpace),
                       SkPDFIndirectReference(), SkToInt(data->size()), SkPDFStreamFormat::DCT);
     return true;
+#endif
 }
 
 SkBitmap to_pixels(const SkImage* image) {
