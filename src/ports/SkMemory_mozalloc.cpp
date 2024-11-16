@@ -54,3 +54,16 @@ void* sk_malloc_flags(size_t size, unsigned flags) {
 size_t sk_malloc_size(void* addr, size_t size) {
     return std::max(moz_malloc_usable_size(addr), size);
 }
+
+#include "include/codec/SkCodec.h"
+#include "include/core/SkAlphaType.h"
+#include "include/core/SkImage.h"
+
+namespace SkCodecs {
+
+sk_sp<SkImage> DeferredImage(std::unique_ptr<SkCodec> codec, std::optional<SkAlphaType> alphaType) {
+    return nullptr;
+}
+
+}
+
