@@ -60,6 +60,17 @@
 #endif
 
 /**
+ * Helper macro to use no_sanitize on clang or no_sanitize_undefined on GCC.
+ */
+#if !defined(SK_NO_SANITIZE_UNDEFINED)
+  #if defined(__clang__)
+    #define SK_NO_SANITIZE_UNDEFINED(A) SK_NO_SANITIZE(A)
+  #elif defined(__GNUC__)
+    #define SK_NO_SANITIZE_UNDEFINED(A) SK_ATTRIBUTE(no_sanitize_undefined)
+  #endif
+#endif
+
+/**
  * Helper macro to define no_sanitize attributes only with clang.
  */
 #if defined(__clang__) && defined(__has_attribute)

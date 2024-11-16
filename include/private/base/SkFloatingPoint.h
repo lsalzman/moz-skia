@@ -131,7 +131,7 @@ static constexpr int64_t sk_float_saturate2int64(float x) {
 // Cast double to float, ignoring any warning about too-large finite values being cast to float.
 // Clang thinks this is undefined, but it's actually implementation defined to return either
 // the largest float or infinity (one of the two bracketing representable floats).  Good enough!
-SK_NO_SANITIZE("float-cast-overflow")
+SK_NO_SANITIZE_UNDEFINED("float-cast-overflow")
 static constexpr float sk_double_to_float(double x) {
     return static_cast<float>(x);
 }
@@ -157,12 +157,12 @@ static inline float sk_float_rsqrt         (float x) { return 1.0f / std::sqrt(x
 #pragma warning(push)
 #pragma warning(disable : 4723)
 #endif
-SK_NO_SANITIZE("float-divide-by-zero")
+SK_NO_SANITIZE_UNDEFINED("float-divide-by-zero")
 static constexpr float sk_ieee_float_divide(float numer, float denom) {
     return numer / denom;
 }
 
-SK_NO_SANITIZE("float-divide-by-zero")
+SK_NO_SANITIZE_UNDEFINED("float-divide-by-zero")
 static constexpr double sk_ieee_double_divide(double numer, double denom) {
     return numer / denom;
 }

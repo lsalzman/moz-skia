@@ -69,7 +69,7 @@ SI float reciprocal_alpha(float a) {
 // -- SSE -- Harden against timing attacks -- MSVC is not supported.
 using F4 = __m128;
 
-SK_NO_SANITIZE("float-divide-by-zero")
+SK_NO_SANITIZE_UNDEFINED("float-divide-by-zero")
 SI float reciprocal_alpha_times_255(float a) {
     SkASSERT(0 <= a && a <= 255);
     F4 vA{a, a, a, a};
@@ -77,7 +77,7 @@ SI float reciprocal_alpha_times_255(float a) {
     return _mm_and_ps(sk_bit_cast<__m128>(vA != F4{0.0f}), q)[0];
 }
 
-SK_NO_SANITIZE("float-divide-by-zero")
+SK_NO_SANITIZE_UNDEFINED("float-divide-by-zero")
 SI float reciprocal_alpha(float a) {
     SkASSERT(0 <= a && a <= 1);
     F4 vA{a, a, a, a};
@@ -159,7 +159,7 @@ SI uint32_t unpremul_simulating_RP(float reciprocalA, float c) {
 SI uint32_t rgbA_to_CCCA(float c00, float c08, float c16, float a) {
     if constexpr (kFastUnpremul) {
         const float reciprocalA = reciprocal_alpha_times_255(a);
-        auto unpremul = [reciprocalA](float c) {
+        auto unpremul = [reciprocalA](float c) -> uint32_t {
             return unpremul_quick(reciprocalA, c);
         };
         return (uint32_t) a << 24
@@ -169,7 +169,7 @@ SI uint32_t rgbA_to_CCCA(float c00, float c08, float c16, float a) {
     } else {
         const float normalizedA = a * (1.0f / 255.0f);
         const float reciprocalA = reciprocal_alpha(normalizedA);
-        auto unpremul = [reciprocalA](float c) {
+        auto unpremul = [reciprocalA](float c) -> uint32_t {
             return unpremul_simulating_RP(reciprocalA, c);
         };
         return (uint32_t) a << 24
