@@ -16,10 +16,14 @@ SkImageInfo SkEncodedInfo::makeImageInfo() const {
                                        kN32_SkColorType      ;
     auto alpha = kOpaque_Alpha == fAlpha ? kOpaque_SkAlphaType
                                          : kUnpremul_SkAlphaType;
+#ifdef MOZ_SKIA
+    auto cs = SkColorSpace::MakeSRGB();
+#else
     auto cs = fColorProfile ? fColorProfile->getExactColorSpace() : SkColorSpace::MakeSRGB();
     if (!cs) {
         cs = SkColorSpace::MakeSRGB();
     }
+#endif
     return SkImageInfo::Make(fWidth, fHeight, ct, alpha, std::move(cs));
 }
 
@@ -42,7 +46,7 @@ SkEncodedInfo SkEncodedInfo::Make(
         int width, int height, Color color, Alpha alpha, int bitsPerComponent,
         std::unique_ptr<SkCodecs::ColorProfile> profile, int colorDepth) {
     return Make(width, height, color, alpha, bitsPerComponent, colorDepth, std::move(profile),
-                skhdr::Metadata::MakeEmpty());
+                skhdr::Metadata{});
 }
 
 // static
@@ -72,7 +76,10 @@ sk_sp<const SkData> SkEncodedInfo::profileData() const {
 SkEncodedInfo SkEncodedInfo::copy() const {
     return SkEncodedInfo(
         fWidth, fHeight, fColor, fAlpha, fBitsPerComponent, fColorDepth,
-        fColorProfile ? fColorProfile->clone() : nullptr, fHdrMetadata);
+#ifndef MOZ_SKIA
+        fColorProfile ? fColorProfile->clone() :
+#endif
+            nullptr, fHdrMetadata);
 }
 
 SkEncodedInfo::SkEncodedInfo(SkEncodedInfo&& orig) = default;

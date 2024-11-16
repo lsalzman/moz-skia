@@ -19,7 +19,6 @@
 #include "include/core/SkScalar.h"
 #include "include/core/SkSize.h"
 #include "include/core/SkSurface.h"
-#include "src/capture/SkCaptureCanvas.h"
 #include "src/image/SkRescaleAndReadPixels.h"
 
 #include <atomic>
