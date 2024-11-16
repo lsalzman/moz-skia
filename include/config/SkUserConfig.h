@@ -164,6 +164,8 @@
 #  endif
 #endif
 
+#define SK_DISABLE_LEGACY_IMAGE_READBUFFER
+
 #define SK_GAMMA_EXPONENT 1.0
 #define SK_GAMMA_CONTRAST 0.0
 
