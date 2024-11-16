@@ -384,7 +384,7 @@ static bool compare_edges(const SkEdge* a, const SkEdge* b) {
 }
 
 static SkEdge* sort_edges(SkEdge* list[], int count, SkEdge** last) {
-    SkTQSort(list, list + count, compare_edges);
+    SkTQSort<SkEdge*, bool (*)(const SkEdge*, const SkEdge*)>(list, list + count, compare_edges);
 
     // now make the edges linked in sorted order
     for (int i = 1; i < count; i++) {
