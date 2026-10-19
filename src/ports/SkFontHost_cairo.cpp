@@ -701,7 +701,8 @@ SkScalerContext::GlyphMetrics SkScalerContext_CairoFT::generateMetrics(const SkG
 
         if (fFTFace->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
             mx.maskFormat = SkMask::kARGB32_Format;
-        } else if (isLCD(fRec)) {
+        } else if (fFTFace->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_GRAY ||
+                   isLCD(fRec)) {
             mx.maskFormat = SkMask::kA8_Format;
         }
 
